@@ -1,0 +1,36 @@
+services:
+  dogecade:
+    build: .
+    image: dogecade:latest
+    # `network_mode: host` is the simplest way to reach relay boards and a
+    # local dogecoind on the LAN, at the cost of losing Docker's per-service
+    # port/network isolation. If you'd rather keep bridge networking, drop
+    # this line, publish the ports you need below, and make sure the relay
+    # boards' IPs and DOGECOIND_RPC_URL/DOGECOIND_ZMQ_ADDR are reachable from
+    # inside the container's network namespace (e.g. via extra_hosts or a
+    # shared user-defined network with the node).
+    network_mode: host
+    # ports:
+    #   - "8080:8080"
+    restart: unless-stopped
+    volumes:
+      - dogecade-data:/data
+    environment:
+      DOGECADE_DB_PATH: /data/dogecade.db
+      # Must be reachable over HTTPS from customers' phones for OIDC
+      # redirects to work; put a reverse proxy (Caddy/Traefik/nginx) in
+      # front terminating TLS and forwarding to this service.
+      DOGECADE_BASE_URL: https://arcade.example.com
+      DOGECADE_LISTEN_ADDR: ":8080"
+      DOGECOIND_RPC_URL: "http://127.0.0.1:22555"
+      DOGECOIND_RPC_USER: "dogecade"
+      DOGECOIND_RPC_PASS: "changeme"
+      DOGECOIND_ZMQ_ADDR: "tcp://127.0.0.1:28332"
+      DOGECADE_ADMIN_SUBJECTS: ""
+      DOGECADE_OIDC_ISSUER_URL: ""
+      DOGECADE_OIDC_CLIENT_ID: ""
+      DOGECADE_OIDC_CLIENT_SECRET: ""
+      DOGECADE_SESSION_SECRET: ""
+
+volumes:
+  dogecade-data:
