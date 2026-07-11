@@ -1,0 +1,4 @@
+/dogecade
+*.db
+*.db-shm
+*.db-wal
