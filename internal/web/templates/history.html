@@ -1,0 +1,14 @@
+{{define "title"}}History{{end}}
+{{define "content"}}
+<h1>Your History</h1>
+<table class="history">
+<thead><tr><th>When</th><th>Kind</th><th>Delta</th><th>Note</th></tr></thead>
+<tbody>
+{{range .Entries}}
+<tr><td>{{.CreatedAt}}</td><td>{{.Kind}}</td><td>{{.Delta}}</td><td>{{.Note}}</td></tr>
+{{else}}
+<tr><td colspan="4">No activity yet.</td></tr>
+{{end}}
+</tbody>
+</table>
+{{end}}

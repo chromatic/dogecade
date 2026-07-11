@@ -1,0 +1,44 @@
+{{define "title"}}Admin: User{{end}}
+{{define "content"}}
+<h1>User #{{.Target.ID}}</h1>
+<nav class="admin-nav"><a href="/admin/users">&larr; Users</a></nav>
+
+{{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+
+<p><strong>Display name:</strong> {{.Target.DisplayName}}<br>
+<strong>Admin:</strong> {{if .Target.IsAdmin}}yes{{else}}no{{end}}<br>
+<strong>Balance:</strong> <span class="balance">{{.Balance}} tokens</span></p>
+
+<div class="admin-section">
+  <h2>Manual balance adjustment</h2>
+  <p>Positive credits tokens, negative debits them. A note is required for the audit trail.</p>
+  <form class="admin-form" method="post" action="/admin/users/{{.Target.ID}}/adjust">
+    <label>Delta <input type="number" name="delta" required></label>
+    <label>Note <input type="text" name="note" required></label>
+    <button type="submit" class="button">Apply adjustment</button>
+  </form>
+</div>
+
+<div class="admin-section">
+  <h2>Merge another account into this one</h2>
+  <p>The "lost account" tool: moves the other account's balance, addresses, and pulses here, then deletes it.</p>
+  <form class="admin-form" method="post" action="/admin/users/{{.Target.ID}}/merge">
+    <label>Merge from user ID <input type="number" name="from_id" required></label>
+    <button type="submit" class="button">Merge</button>
+  </form>
+</div>
+
+<div class="admin-section">
+  <h2>Ledger history</h2>
+  <table class="history">
+    <thead><tr><th>Delta</th><th>Kind</th><th>Note</th><th>Created</th></tr></thead>
+    <tbody>
+    {{range .History}}
+      <tr><td>{{.Delta}}</td><td>{{.Kind}}</td><td>{{.Note}}</td><td>{{.CreatedAt}}</td></tr>
+    {{else}}
+      <tr><td colspan="4">No ledger entries yet.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}

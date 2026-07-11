@@ -1,0 +1,14 @@
+{{define "title"}}QR: {{.Machine.Name}}{{end}}
+{{define "content"}}
+<h1>{{.Machine.Name}}</h1>
+<nav class="admin-nav no-print"><a href="/admin/machines">&larr; Machines</a></nav>
+
+<p class="no-print">Scan this to jump straight to this machine's page. Print
+it (browser print, no extra styling needed &mdash; the header and this note
+are hidden automatically) and stick it on the cabinet.</p>
+
+<img class="qr machine-qr" src="{{.QR}}" alt="QR code for {{.Machine.Name}}" width="320" height="320">
+<p class="address">{{.URL}}</p>
+
+<button type="button" class="button no-print" onclick="window.print()">Print</button>
+{{end}}

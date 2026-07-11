@@ -1,0 +1,45 @@
+{{define "title"}}Admin: Settings{{end}}
+{{define "content"}}
+<h1>Settings</h1>
+<nav class="admin-nav"><a href="/admin">&larr; Dashboard</a></nav>
+
+{{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+{{if .Saved}}<p class="success">Settings saved.</p>{{end}}
+
+<form class="admin-form" method="post" action="/admin/settings">
+  <label>Min confirmations required before crediting
+    <input type="number" name="min_confirmations" value="{{.MinConfirmations}}" min="0" required>
+  </label>
+  <label>Zero-conf max (koinu) &mdash; 0 disables 0-conf crediting
+    <input type="number" name="zero_conf_max_koinu" value="{{.ZeroConfMaxKoinu}}" min="0" required class="koinu-input">
+    <span class="doge-hint">= {{doge .ZeroConfMaxKoinu}} DOGE</span>
+  </label>
+  <label>Pool warning threshold
+    <input type="number" name="pool_warn_threshold" value="{{.PoolWarnThreshold}}" min="0" required>
+  </label>
+  <label>Pool urgent threshold
+    <input type="number" name="pool_urgent_threshold" value="{{.PoolUrgentThreshold}}" min="0" required>
+  </label>
+  <label>Token price (koinu per token)
+    <input type="number" name="token_price_koinu" value="{{.TokenPriceKoinu}}" min="1" required class="koinu-input">
+    <span class="doge-hint">= {{doge .TokenPriceKoinu}} DOGE</span>
+  </label>
+  <label>Relay pulse gap (ms)
+    <input type="number" name="relay_pulse_gap_ms" value="{{.RelayPulseGapMs}}" min="0" required>
+  </label>
+  <label>Relay max attempts before refund
+    <input type="number" name="relay_max_attempts" value="{{.RelayMaxAttempts}}" min="1" required>
+  </label>
+  <label>Direct-pay max credits per transaction (caps one oversized payment)
+    <input type="number" name="direct_pay_max_credits_per_tx" value="{{.DirectPayMaxCreditsPerTx}}" min="1" required>
+  </label>
+  <label>Direct-pay rotation interval (hours) &mdash; 0 disables
+    <input type="number" name="direct_pay_rotate_interval_hours" value="{{.DirectPayRotateIntervalHr}}" min="0" required>
+  </label>
+  <label>Direct-pay rotate after N uses &mdash; 0 disables
+    <input type="number" name="direct_pay_rotate_after_uses" value="{{.DirectPayRotateAfterUses}}" min="0" required>
+  </label>
+  <button type="submit" class="button">Save</button>
+</form>
+<script src="/static/koinu.js"></script>
+{{end}}

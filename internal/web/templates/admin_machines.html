@@ -1,0 +1,166 @@
+{{define "title"}}Admin: Machines &amp; relays{{end}}
+{{define "content"}}
+<h1>Machines &amp; relays</h1>
+<nav class="admin-nav"><a href="/admin">&larr; Dashboard</a></nav>
+
+{{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+
+<div class="admin-section">
+  <h2>Machines</h2>
+  <table class="history">
+    <thead><tr><th>QR</th><th>Slug</th><th>Name</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {{$machineQR := .MachineQR}}
+    {{range .Machines}}
+      <tr>
+        <td><a href="/admin/machines/{{.ID}}/qr" title="Print QR for {{.Name}}">
+          <img class="qr-thumb" src="{{index $machineQR .ID}}" alt="QR code for {{.Name}}">
+        </a></td>
+        <td>{{.Slug}}</td>
+        <td>{{.Name}}</td>
+        <td><span class="badge {{if .IsActive}}active{{else}}inactive{{end}}">{{if .IsActive}}active{{else}}inactive{{end}}</span></td>
+        <td>
+          <form class="inline-admin" method="post" action="/admin/machines/{{.ID}}/toggle">
+            <input type="hidden" name="active" value="{{if .IsActive}}0{{else}}1{{end}}">
+            <button type="submit" class="button secondary">{{if .IsActive}}Disable{{else}}Enable{{end}}</button>
+          </form>
+          <form class="inline-admin" method="post" action="/admin/relays/test-fire">
+            <input type="hidden" name="machine_id" value="{{.ID}}">
+            <button type="submit" class="button secondary">Test-fire</button>
+          </form>
+          <a class="button secondary" href="/admin/machines/{{.ID}}/qr">Print QR</a>
+        </td>
+      </tr>
+    {{else}}
+      <tr><td colspan="5">No machines yet.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+  <form class="admin-form" method="post" action="/admin/machines">
+    <label>Slug <input type="text" name="slug" required></label>
+    <label>Name <input type="text" name="name" required></label>
+    <button type="submit" class="button">Add machine</button>
+  </form>
+  <p class="notice">After adding a machine, use the QR thumbnail (or "Print
+  QR") above to get a scannable code linking straight to its customer page
+  &mdash; print and stick it on the cabinet.</p>
+</div>
+
+<div class="admin-section">
+  <h2>Direct pay-to-machine</h2>
+  <p>Pay the machine directly, no account needed. Each enabled machine has one
+  active address at a time, drawn from the machine_direct address pool
+  (imported separately below).</p>
+  <table class="history">
+    <thead><tr><th>Machine</th><th>Enabled</th><th>Price</th><th>Active address</th><th>Uses</th><th></th></tr></thead>
+    <tbody>
+    {{$directPay := .DirectPay}}
+    {{range .Machines}}
+      {{$active := index $directPay .ID}}
+      <tr>
+        <td>{{.Name}}</td>
+        <td><span class="badge {{if .DirectPayEnabled}}active{{else}}inactive{{end}}">{{if .DirectPayEnabled}}enabled{{else}}disabled{{end}}</span></td>
+        <td>
+          {{if .DirectPayEnabled}}{{doge .DirectPlayPriceKoinu}} DOGE
+          {{else if .DirectPlayPriceKoinu}}&mdash; (last: {{doge .DirectPlayPriceKoinu}} DOGE)
+          {{else}}&mdash;{{end}}
+        </td>
+        <td>{{if $active.Address}}{{$active.Address}}{{else}}&mdash;{{end}}</td>
+        <td>{{if $active.Address}}{{$active.UseCount}}{{else}}&mdash;{{end}}</td>
+        <td>
+          <form class="inline-admin" method="post" action="/admin/machines/{{.ID}}/direct-pay">
+            <input type="hidden" name="enabled" value="{{if .DirectPayEnabled}}0{{else}}1{{end}}">
+            {{if not .DirectPayEnabled}}
+            <input type="number" name="price_koinu" placeholder="price in koinu" min="1" required class="koinu-input"
+              {{if .DirectPlayPriceKoinu}}value="{{.DirectPlayPriceKoinu}}"{{end}}>
+            <span class="doge-hint">{{if .DirectPlayPriceKoinu}}= {{doge .DirectPlayPriceKoinu}} DOGE{{end}}</span>
+            {{end}}
+            <button type="submit" class="button secondary">{{if .DirectPayEnabled}}Disable{{else}}Enable{{end}}</button>
+          </form>
+          {{if .DirectPayEnabled}}
+          <form class="inline-admin" method="post" action="/admin/machines/{{.ID}}/direct-pay/rotate">
+            <button type="submit" class="button secondary">Rotate address</button>
+          </form>
+          {{end}}
+        </td>
+      </tr>
+    {{else}}
+      <tr><td colspan="6">No machines yet.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+
+<div class="admin-section">
+  <h2>Relay boards</h2>
+  <table class="history">
+    <thead><tr><th>Name</th><th>Base URL</th><th>Status</th><th>Last seen</th><th></th></tr></thead>
+    <tbody>
+    {{range .Boards}}
+      <tr>
+        <td>{{.Name}}</td>
+        <td>{{.BaseURL}}</td>
+        <td><span class="badge {{if .IsActive}}active{{else}}inactive{{end}}">{{if .IsActive}}active{{else}}inactive{{end}}</span></td>
+        <td>{{if .LastSeenAt}}{{.LastSeenAt}}{{else}}never{{end}}</td>
+        <td>
+          <form class="inline-admin" method="post" action="/admin/boards/{{.ID}}/toggle">
+            <input type="hidden" name="active" value="{{if .IsActive}}0{{else}}1{{end}}">
+            <button type="submit" class="button secondary">{{if .IsActive}}Disable{{else}}Enable{{end}}</button>
+          </form>
+        </td>
+      </tr>
+    {{else}}
+      <tr><td colspan="5">No relay boards yet.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+  <form class="admin-form" method="post" action="/admin/boards">
+    <label>Name <input type="text" name="name" required></label>
+    <label>Base URL <input type="text" name="base_url" placeholder="http://relay1.lan" required></label>
+    <button type="submit" class="button">Add board</button>
+  </form>
+</div>
+
+<div class="admin-section">
+  <h2>Relay bindings</h2>
+  <table class="history">
+    <thead><tr><th>Machine</th><th>Board</th><th>Relay #</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {{range .Bindings}}
+      <tr>
+        <td>{{.MachineName}}</td>
+        <td>{{.BoardName}}</td>
+        <td>{{.RelayNumber}}</td>
+        <td><span class="badge {{if .IsActive}}active{{else}}inactive{{end}}">{{if .IsActive}}active{{else}}inactive{{end}}</span></td>
+        <td>
+          {{if .IsActive}}
+          <form class="inline-admin" method="post" action="/admin/relays/{{.ID}}/unbind">
+            <button type="submit" class="button secondary">Unbind</button>
+          </form>
+          {{end}}
+        </td>
+      </tr>
+    {{else}}
+      <tr><td colspan="5">No relay bindings yet.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+  <form class="admin-form" method="post" action="/admin/relays/bind">
+    <label>Machine
+      <select name="machine_id" required>
+        <option value="" disabled selected>Select a machine&hellip;</option>
+        {{range .Machines}}<option value="{{.ID}}">{{.Name}} ({{.Slug}})</option>{{end}}
+      </select>
+    </label>
+    <label>Board
+      <select name="board_id" required>
+        <option value="" disabled selected>Select a board&hellip;</option>
+        {{range .Boards}}<option value="{{.ID}}">{{.Name}} ({{.BaseURL}})</option>{{end}}
+      </select>
+    </label>
+    <label>Relay number <input type="number" name="relay_number" min="1" value="1" required></label>
+    <button type="submit" class="button">Bind</button>
+  </form>
+</div>
+<script src="/static/koinu.js"></script>
+{{end}}

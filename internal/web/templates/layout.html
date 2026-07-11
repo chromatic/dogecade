@@ -1,0 +1,28 @@
+{{define "layout"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+<title>{{block "title" .}}Dogecade{{end}}</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="/">&#128021; Dogecade</a>
+  <nav>
+    <a href="/machines">Machines</a>
+    {{if .User}}
+      <a href="/history">History</a>
+      {{if .User.IsAdmin}}<a href="/admin">Admin</a>{{end}}
+      <form method="post" action="/auth/logout" class="inline-form"><button type="submit">Log out</button></form>
+    {{else}}
+      <a href="/auth/login">Sign in</a>
+    {{end}}
+  </nav>
+</header>
+<main>
+{{block "content" .}}{{end}}
+</main>
+</body>
+</html>
+{{end}}

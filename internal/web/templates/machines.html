@@ -1,0 +1,11 @@
+{{define "title"}}Machines{{end}}
+{{define "content"}}
+<h1>Machines</h1>
+<ul class="machine-list">
+{{range .Machines}}
+  <li><a href="/m/{{.Slug}}">{{.Name}}</a></li>
+{{else}}
+  <li>No machines yet.</li>
+{{end}}
+</ul>
+{{end}}

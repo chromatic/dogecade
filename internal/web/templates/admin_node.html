@@ -1,0 +1,31 @@
+{{define "title"}}Admin: Node connection{{end}}
+{{define "content"}}
+<h1>Node connection</h1>
+<nav class="admin-nav"><a href="/admin">&larr; Dashboard</a></nav>
+
+<p class="notice"><strong>Save</strong> takes effect after the next service restart &mdash; the live node
+client and chain watcher are only built once, at boot. <strong>Check connection</strong> is
+different: it tests the fields below immediately, live, without saving or
+restarting anything.</p>
+
+{{if .Saved}}<p class="success">Node settings saved.</p>{{end}}
+{{if .CheckResult}}<p class="success">{{.CheckResult}}</p>{{end}}
+{{if .CheckError}}<p class="error">Connection check failed: {{.CheckError}}</p>{{end}}
+
+<form class="admin-form" method="post" action="/admin/settings/node">
+  <label>RPC URL
+    <input type="text" name="rpc_url" value="{{.Config.RPCURL}}" placeholder="http://127.0.0.1:22555">
+  </label>
+  <label>RPC user
+    <input type="text" name="rpc_user" value="{{.Config.RPCUser}}">
+  </label>
+  <label>RPC password {{if .HasRPCPass}}(currently set &mdash; leave blank to keep it){{else}}(not set){{end}}
+    <input type="password" name="rpc_pass" value="" autocomplete="off">
+  </label>
+  <label>ZMQ endpoint
+    <input type="text" name="zmq_addr" value="{{.Config.ZMQAddr}}" placeholder="tcp://127.0.0.1:28332">
+  </label>
+  <button type="submit" class="button">Save</button>
+  <button type="submit" formaction="/admin/settings/node/check" class="button secondary">Check connection (without saving)</button>
+</form>
+{{end}}

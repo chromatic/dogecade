@@ -1,0 +1,30 @@
+{{define "title"}}Admin: Users{{end}}
+{{define "content"}}
+<h1>Users</h1>
+<nav class="admin-nav"><a href="/admin">&larr; Dashboard</a></nav>
+
+<p>There's no email on file by design &mdash; search by display name.</p>
+<form class="admin-form" method="get" action="/admin/users">
+  <label>Display name contains
+    <input type="text" name="q" value="{{.Query}}">
+  </label>
+  <button type="submit" class="button">Search</button>
+</form>
+
+{{if .Query}}
+<table class="history">
+  <thead><tr><th>ID</th><th>Display name</th><th>Admin</th></tr></thead>
+  <tbody>
+  {{range .Users}}
+    <tr>
+      <td><a href="/admin/users/{{.ID}}">{{.ID}}</a></td>
+      <td>{{.DisplayName}}</td>
+      <td>{{if .IsAdmin}}yes{{else}}no{{end}}</td>
+    </tr>
+  {{else}}
+    <tr><td colspan="3">No matching users.</td></tr>
+  {{end}}
+  </tbody>
+</table>
+{{end}}
+{{end}}

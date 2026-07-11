@@ -1,0 +1,15 @@
+{{define "title"}}Buy Tokens{{end}}
+{{define "content"}}
+<h1>Buy Tokens</h1>
+{{if .Paused}}
+  <p class="notice">{{.PauseReason}}</p>
+{{else}}
+  <p>Send any amount of Dogecoin to the address below. Your balance updates
+  automatically once the payment is seen &mdash; no need to keep this page
+  open, but it's fun to watch.</p>
+  <img class="qr" src="{{.QRDataURI}}" alt="QR code for {{.Address}}" width="240" height="240">
+  <p class="address" id="address">{{.Address}}</p>
+  <p id="status" data-address="{{.Address}}">Waiting for payment&hellip;</p>
+  <script src="/static/buy.js"></script>
+{{end}}
+{{end}}

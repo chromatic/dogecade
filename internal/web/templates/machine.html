@@ -1,0 +1,33 @@
+{{define "title"}}{{.Machine.Name}}{{end}}
+{{define "content"}}
+<h1>{{.Machine.Name}}</h1>
+{{if not .User}}
+  <p>Sign in to redeem a token on this machine.</p>
+  <a class="button" href="/auth/login?redirect=/m/{{.Machine.Slug}}">Sign in</a>
+{{else}}
+  <p class="balance">Your balance: <strong>{{.Balance}}</strong> token{{if ne .Balance 1}}s{{end}}</p>
+  {{if .Redeemed}}
+    <p class="success">Credit sent! Enjoy.</p>
+  {{end}}
+  {{if .Error}}
+    <p class="notice">{{.Error}}</p>
+  {{end}}
+  <form method="post" action="/m/{{.Machine.Slug}}">
+    <button class="button" type="submit">Redeem 1 token</button>
+  </form>
+{{end}}
+{{if .DirectPayAddress}}
+  <h2>Or pay this machine directly</h2>
+  <p>No account needed &mdash; send Dogecoin straight to this machine's address
+  and it credits itself. <strong>{{doge .Machine.DirectPlayPriceKoinu}} DOGE</strong>
+  buys one credit; send a multiple of that for more at once.</p>
+  <p class="notice">This is a one-way payment with no account behind it, so
+  send exactly what you mean to spend &mdash; any amount left over after
+  dividing by the credit price isn't refunded or carried over to a future
+  payment.</p>
+  <img class="qr" src="{{.DirectPayQRDataURI}}" alt="QR code for {{.DirectPayAddress}}" width="240" height="240">
+  <p class="address">{{.DirectPayAddress}}</p>
+  <p id="status" data-address="{{.DirectPayAddress}}" data-mode="direct">Waiting for payment&hellip;</p>
+  <script src="/static/buy.js"></script>
+{{end}}
+{{end}}

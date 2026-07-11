@@ -1,0 +1,33 @@
+{{define "title"}}Admin: Deposits{{end}}
+{{define "content"}}
+<h1>Deposits</h1>
+<nav class="admin-nav"><a href="/admin">&larr; Dashboard</a></nav>
+
+<nav class="admin-nav">
+  <a href="/admin/deposits">All</a>
+  <a href="/admin/deposits?state=seen">Seen</a>
+  <a href="/admin/deposits?state=confirmed">Confirmed</a>
+  <a href="/admin/deposits?state=credited">Credited</a>
+  <a href="/admin/deposits?state=orphaned">Orphaned</a>
+</nav>
+
+<table class="history">
+  <thead><tr><th>Address</th><th>TxID</th><th>Vout</th><th>Amount</th><th>Confirmations</th><th>State</th><th>Created</th><th>Credited</th></tr></thead>
+  <tbody>
+  {{range .Deposits}}
+    <tr>
+      <td class="address">{{.Address}}</td>
+      <td>{{.TxID}}</td>
+      <td>{{.Vout}}</td>
+      <td>{{doge .AmountKoinu}} DOGE <span class="doge-hint">({{.AmountKoinu}} koinu)</span></td>
+      <td>{{.Confirmations}}</td>
+      <td>{{.State}}</td>
+      <td>{{.CreatedAt}}</td>
+      <td>{{.CreditedAt}}</td>
+    </tr>
+  {{else}}
+    <tr><td colspan="8">No deposits{{if .StateFilter}} in state "{{.StateFilter}}"{{end}}.</td></tr>
+  {{end}}
+  </tbody>
+</table>
+{{end}}

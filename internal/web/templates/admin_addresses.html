@@ -1,0 +1,85 @@
+{{define "title"}}Admin: Addresses{{end}}
+{{define "content"}}
+<h1>Addresses</h1>
+<nav class="admin-nav"><a href="/admin">&larr; Dashboard</a></nav>
+
+{{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+{{if .Message}}<p class="success">{{.Message}}</p>{{end}}
+
+<div class="admin-section">
+  <h2>Pool counts</h2>
+  <ul>
+  {{range $state, $count := .Counts}}
+    <li>{{$state}}: {{$count}}</li>
+  {{else}}
+    <li>No addresses loaded yet.</li>
+  {{end}}
+  </ul>
+</div>
+
+<div class="admin-section">
+  <h2>Import addresses</h2>
+  <form class="admin-form" method="post" action="/admin/addresses/import">
+    <label>Purpose
+      <select name="purpose">
+        <option value="token_deposit">Token purchase pool (customer buy flow)</option>
+        <option value="machine_direct">Machine direct-pay pool</option>
+      </select>
+    </label>
+    <label>Paste addresses, one per line ("#" comments allowed)
+      <textarea name="addresses" required></textarea>
+    </label>
+    <button type="submit" class="button">Import</button>
+  </form>
+</div>
+
+<div class="admin-section">
+  <h2>Pool (unassigned)</h2>
+  <table class="history">
+    <thead><tr><th>Address</th><th>Purpose</th><th></th></tr></thead>
+    <tbody>
+    {{range .Pool}}
+      <tr>
+        <td class="address">{{.Address}}</td>
+        <td>{{.Purpose}}</td>
+        <td>
+          <form class="inline-admin" method="post" action="/admin/addresses/{{.ID}}/retire">
+            <button type="submit" class="button secondary">Retire</button>
+          </form>
+        </td>
+      </tr>
+    {{else}}
+      <tr><td colspan="3">Pool is empty.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+
+<div class="admin-section">
+  <h2>Retired</h2>
+  <table class="history">
+    <thead><tr><th>Address</th><th>Retired at</th></tr></thead>
+    <tbody>
+    {{range .Retired}}
+      <tr><td class="address">{{.Address}}</td><td>{{.RetiredAt}}</td></tr>
+    {{else}}
+      <tr><td colspan="2">No retired addresses.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+
+<div class="admin-section">
+  <h2>Batch history</h2>
+  <table class="history">
+    <thead><tr><th>Batch</th><th>Source</th><th>Count</th><th>Loaded at</th></tr></thead>
+    <tbody>
+    {{range .Batches}}
+      <tr><td>{{.ID}}</td><td>{{.SourceNote}}</td><td>{{.AddressCount}}</td><td>{{.LoadedAt}}</td></tr>
+    {{else}}
+      <tr><td colspan="4">No batches yet.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}

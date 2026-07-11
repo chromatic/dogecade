@@ -1,0 +1,238 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #666666;
+  --accent: #c2a633; /* dogecoin gold */
+  --border: #dddddd;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161a;
+    --fg: #eaeaea;
+    --muted: #9a9a9a;
+    --accent: #d8c26a;
+    --border: #333844;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+}
+
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 3rem;
+}
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.site-header .brand {
+  font-weight: 700;
+  font-size: 1.25rem;
+  text-decoration: none;
+  color: var(--fg);
+}
+
+.site-header nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+a { color: var(--accent); }
+
+.inline-form { display: inline; }
+.inline-form button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.button {
+  display: inline-block;
+  min-height: 44px;
+  line-height: 44px;
+  padding: 0 1.25rem;
+  margin: 0.5rem 0.5rem 0.5rem 0;
+  background: var(--accent);
+  color: #1a1a1a;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  text-align: center;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.button.secondary {
+  background: transparent;
+  border: 2px solid var(--accent);
+  color: var(--fg);
+}
+
+.qr {
+  display: block;
+  margin: 1.5rem auto;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.75rem;
+}
+
+.address {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  text-align: center;
+  word-break: break-all;
+  padding: 0.5rem;
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  border-radius: 6px;
+}
+
+.notice {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  border: 1px solid var(--accent);
+}
+
+.success {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, #3aa35c 20%, transparent);
+  border: 1px solid #3aa35c;
+}
+
+.balance { font-size: 1.1rem; }
+
+.machine-list {
+  list-style: none;
+  padding: 0;
+}
+.machine-list li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.machine-list a {
+  display: block;
+  min-height: 44px;
+  line-height: 44px;
+}
+
+table.history {
+  width: 100%;
+  border-collapse: collapse;
+}
+table.history th, table.history td {
+  text-align: left;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.95rem;
+}
+
+.admin-section {
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+form.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 480px;
+  margin: 1rem 0;
+}
+
+form.admin-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.doge-hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+form.admin-form input, form.admin-form select, form.admin-form textarea {
+  min-height: 44px;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+}
+
+form.admin-form textarea { min-height: 120px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+form.inline-admin { display: inline-flex; gap: 0.5rem; align-items: center; }
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+
+.badge.active { background: color-mix(in srgb, #3aa35c 25%, transparent); }
+.badge.inactive { background: color-mix(in srgb, #c0392b 20%, transparent); }
+
+.error {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, #c0392b 20%, transparent);
+  border: 1px solid #c0392b;
+}
+
+.qr-thumb {
+  width: 64px;
+  height: 64px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+  padding: 0.2rem;
+}
+
+.machine-qr {
+  display: block;
+  margin: 1.5rem auto;
+}
+
+@media print {
+  .no-print, .site-header { display: none !important; }
+  main { max-width: none; padding: 0; }
+}

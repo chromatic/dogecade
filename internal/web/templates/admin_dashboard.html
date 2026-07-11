@@ -1,0 +1,80 @@
+{{define "title"}}Admin{{end}}
+{{define "content"}}
+<h1>Admin dashboard</h1>
+<nav class="admin-nav">
+  <a href="/admin/settings">Settings</a>
+  <a href="/admin/settings/node">Node connection</a>
+  <a href="/admin/machines">Machines &amp; relays</a>
+  <a href="/admin/addresses">Addresses</a>
+  <a href="/admin/deposits">Deposits</a>
+  <a href="/admin/users">Users</a>
+</nav>
+
+<div class="admin-section">
+  <h2>Node state: <span class="badge {{if eq .NodeState "ok"}}active{{else}}inactive{{end}}">{{.NodeState}}</span></h2>
+</div>
+
+<div class="admin-section">
+  <h2>Address pool</h2>
+  <ul>
+  {{range $state, $count := .PoolCounts}}
+    <li>{{$state}}: {{$count}}</li>
+  {{else}}
+    <li>No addresses loaded yet.</li>
+  {{end}}
+  </ul>
+</div>
+
+<div class="admin-section">
+  <h2>Relay boards</h2>
+  <ul>
+  {{range .Boards}}
+    <li>{{.Name}} ({{.BaseURL}}) &mdash; <span class="badge {{if .IsActive}}active{{else}}inactive{{end}}">{{if .IsActive}}active{{else}}inactive{{end}}</span>{{if .LastSeenAt}}, last seen {{.LastSeenAt}}{{else}}, never seen{{end}}</li>
+  {{else}}
+    <li>No relay boards yet.</li>
+  {{end}}
+  </ul>
+</div>
+
+<div class="admin-section">
+  <h2>Unacked alerts</h2>
+  <ul>
+  {{range .Alerts}}
+    <li>
+      <strong>{{.Kind}}</strong>: {{.Message}} ({{.CreatedAt}})
+      <form class="inline-admin" method="post" action="/admin/alerts/{{.ID}}/ack"><button type="submit" class="button secondary">Ack</button></form>
+    </li>
+  {{else}}
+    <li>No unacked alerts.</li>
+  {{end}}
+  </ul>
+</div>
+
+<div class="admin-section">
+  <h2>Recent deposits</h2>
+  <table class="history">
+    <thead><tr><th>Address</th><th>Amount (DOGE)</th><th>State</th><th>Confirmations</th><th>Created</th></tr></thead>
+    <tbody>
+    {{range .Deposits}}
+      <tr><td>{{.Address}}</td><td>{{doge .AmountKoinu}} DOGE</td><td>{{.State}}</td><td>{{.Confirmations}}</td><td>{{.CreatedAt}}</td></tr>
+    {{else}}
+      <tr><td colspan="5">No deposits yet.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+
+<div class="admin-section">
+  <h2>Recent redemptions</h2>
+  <table class="history">
+    <thead><tr><th>Machine</th><th>State</th><th>Attempts</th><th>Created</th></tr></thead>
+    <tbody>
+    {{range .Redemptions}}
+      <tr><td>{{.MachineName}}</td><td>{{.State}}</td><td>{{.Attempts}}</td><td>{{.CreatedAt}}</td></tr>
+    {{else}}
+      <tr><td colspan="4">No redemptions yet.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}

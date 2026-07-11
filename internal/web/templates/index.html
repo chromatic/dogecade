@@ -1,0 +1,12 @@
+{{define "title"}}Dogecade{{end}}
+{{define "content"}}
+<h1>Welcome to the Dogecade</h1>
+{{if .User}}
+  <p class="balance">Balance: <strong>{{.Balance}}</strong> token{{if ne .Balance 1}}s{{end}}</p>
+  <a class="button" href="/buy">Buy tokens</a>
+{{else}}
+  <p>Sign in to buy tokens and start playing.</p>
+  <a class="button" href="/auth/login">Sign in</a>
+{{end}}
+<a class="button secondary" href="/machines">Browse machines</a>
+{{end}}
