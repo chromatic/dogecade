@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
@@ -136,6 +137,7 @@ func (h *Handlers) Callback(w http.ResponseWriter, r *http.Request) {
 		displayName = claims.Email
 	}
 	isAdmin := IsAdminSubject(h.adminSubjects, claims.Issuer, claims.Subject)
+	slog.Info("oidc login", "issuer", claims.Issuer, "subject", claims.Subject, "is_admin", isAdmin)
 
 	user, err := h.users.GetOrCreateBySubjectHash(r.Context(), subjectHash, displayName, isAdmin)
 	if err != nil {

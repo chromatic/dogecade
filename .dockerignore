@@ -1,0 +1,16 @@
+# Keep the Docker build context (and therefore COPY . .'s cache layer, and
+# everything after it — including go build) scoped to what `go build` in
+# the Dockerfile actually needs: go.mod/go.sum, cmd/, internal/. Anything
+# else changing (docs, scripts, this file, README) shouldn't invalidate
+# that layer's cache and force a full rebuild.
+.git
+.github
+.golangci.yml
+.claude
+CLAUDE.md
+README.md
+docs
+scripts
+Dockerfile
+docker-compose.yml
+dogecade

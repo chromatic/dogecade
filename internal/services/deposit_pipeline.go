@@ -208,28 +208,31 @@ func (p *DepositPipeline) upsertAndAdvance(ctx context.Context, addressID int64,
 		currentState = newState
 	}
 
-	// If now in 'confirmed' state, attempt to credit
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	// The credit hook (p.credit) opens its own transaction against the same
+	// *sql.DB, which has exactly one pooled connection (see store.Open) —
+	// SQLite serializes writes anyway. Calling it while the transaction
+	// above was still open meant it could never acquire a connection,
+	// deadlocking forever (the outer tx held the only connection and
+	// wouldn't commit until credit() returned). So: commit the
+	// seen->confirmed transition first, then run credit() unlocked, then a
+	// second short transaction marks 'credited'.
 	if currentState == "confirmed" {
 		if err := p.credit(ctx, depositID); err != nil {
-			// Credit hook failed; leave deposit at 'confirmed' and return error
-			if err := tx.Commit(); err != nil {
-				return fmt.Errorf("failed to commit transaction: %w", err)
-			}
+			// Credit hook failed; deposit is already committed at
+			// 'confirmed' above, so it's retryable on the next event.
 			return fmt.Errorf("credit hook failed: %w", err)
 		}
 
-		// Credit succeeded; mark as 'credited' with timestamp
-		_, err := tx.ExecContext(ctx,
+		if _, err := p.store.DB().ExecContext(ctx,
 			"UPDATE deposits SET state = 'credited', credited_at = ? WHERE id = ?",
 			now, depositID,
-		)
-		if err != nil {
+		); err != nil {
 			return fmt.Errorf("failed to update deposit to credited: %w", err)
 		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil

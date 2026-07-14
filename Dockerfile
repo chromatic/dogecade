@@ -9,6 +9,9 @@ COPY . .
 ARG VERSION=dev
 RUN go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" \
     -o /out/dogecade ./cmd/dogecade
+# Placeholder for /data, below, with the ownership a fresh named volume
+# should be initialized with (distroless nonroot's UID/GID is 65532).
+RUN mkdir -p /data-template && chown 65532:65532 /data-template
 
 # UPX roughly triples the compression on top of -s -w (~14MB -> ~5MB),
 # which keeps the final image comfortably under 10MB. Tradeoff: some
@@ -23,6 +26,17 @@ RUN upx --best --lzma -o /out/dogecade-upx /out/dogecade
 
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=compress /out/dogecade-upx /usr/local/bin/dogecade
+# distroless has no shell, so /data can't be mkdir/chown'd here directly.
+# Docker initializes a *new* named volume's ownership from whatever's at
+# its mount point in the image at the time it's first attached — since
+# nothing created /data before VOLUME previously, that was root:root, and
+# the nonroot user below couldn't write to it (SQLite: "unable to open
+# database file"). --chown=nonroot:nonroot on an empty COPY creates it
+# instead with the right ownership baked in. (An existing named volume
+# already populated as root:root won't be fixed by this — remove it,
+# e.g. `docker volume rm`/`docker compose down -v`, and let it get
+# recreated.)
+COPY --from=build --chown=nonroot:nonroot /data-template /data
 VOLUME ["/data"]
 ENV DOGECADE_DB_PATH=/data/dogecade.db
 EXPOSE 8080

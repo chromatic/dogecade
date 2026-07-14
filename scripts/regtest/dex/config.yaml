@@ -1,0 +1,46 @@
+# Dex (dexidp/dex) config for local dogecade end-to-end testing — a real,
+# self-hosted OIDC provider (real discovery doc, real signed tokens, real
+# authorization-code flow), not a mock. See docs/E2E-TESTING.md.
+#
+# Uses the staticPasswords connector so there's no external identity
+# provider to configure: two fixed logins, admin/admin and
+# customer/customer, each with a fixed `userID` that becomes the OIDC `sub`
+# claim. Fixed subjects mean DOGECADE_ADMIN_SUBJECTS can be set correctly
+# *before* the first login — no sign-in-then-flip-is_admin-in-the-DB dance
+# needed the way it is with Google (see docs/E2E-TESTING.md's Google path).
+#
+# The password hashes below are bcrypt("admin") and bcrypt("customer") —
+# fine for local regtest testing, never reuse this file's secrets/passwords
+# anywhere real.
+
+issuer: http://localhost:5556/dex
+
+# In-memory storage: no volume, no ownership/permission questions, no state
+# to reset between test runs — this is throwaway local test data (a fixed
+# admin/customer login, re-declared identically every container start), so
+# there's nothing worth persisting across restarts anyway.
+storage:
+  type: memory
+
+web:
+  http: 0.0.0.0:5556
+
+staticClients:
+  - id: dogecade
+    secret: dogecade-dev-secret
+    name: "Dogecade (local)"
+    redirectURIs:
+      - "http://localhost:8080/auth/callback"
+
+enablePasswordDB: true
+staticPasswords:
+  - email: "admin@dogecade.local"
+    username: "admin"
+    userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
+    # bcrypt("admin")
+    hash: "$2b$10$kKQ7cKnM0FChNxGtkT9X8uvxGJzTtRPeimYlxdk7pykzRICOZNJ/."
+  - email: "customer@dogecade.local"
+    username: "customer"
+    userID: "9a1e3c2a-4b7d-4e2f-8c5a-6f0d2b1a7e33"
+    # bcrypt("customer")
+    hash: "$2b$10$GdH/iXdVzehtreAq5.HNzuh5CO16ihAbCPsSupLHm7c3ZLvN/QGCO"

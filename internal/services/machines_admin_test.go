@@ -41,6 +41,36 @@ func TestMachinesServiceCreateListToggle(t *testing.T) {
 	}
 }
 
+func TestMachinesServiceUpdate(t *testing.T) {
+	s := newTestStore(t)
+	svc := NewMachinesService(s)
+	ctx := context.Background()
+
+	id, err := svc.Create(ctx, "pinball-1", "Pinball One")
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+	otherID, err := svc.Create(ctx, "pinball-2", "Pinball Two")
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	if err := svc.Update(ctx, id, "pinball-1-renamed", "Pinball One Renamed"); err != nil {
+		t.Fatalf("Update failed: %v", err)
+	}
+	m, err := svc.GetByID(ctx, id)
+	if err != nil {
+		t.Fatalf("GetByID failed: %v", err)
+	}
+	if m.Slug != "pinball-1-renamed" || m.Name != "Pinball One Renamed" {
+		t.Fatalf("expected renamed slug/name, got %+v", m)
+	}
+
+	if err := svc.Update(ctx, otherID, "pinball-1-renamed", "Conflict"); !errors.Is(err, ErrMachineSlugTaken) {
+		t.Fatalf("expected ErrMachineSlugTaken, got %v", err)
+	}
+}
+
 func TestMachinesServiceSetDirectPay(t *testing.T) {
 	s := newTestStore(t)
 	svc := NewMachinesService(s)

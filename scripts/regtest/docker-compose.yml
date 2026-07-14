@@ -1,0 +1,166 @@
+# Local end-to-end test stack: a real dogecoind -regtest node, a real
+# self-hosted OIDC provider (Dex, with fixed local admin/customer logins),
+# and dogecade itself, wired together for manual click-through testing. See
+# docs/E2E-TESTING.md for the full walkthrough (importing addresses,
+# creating machines, paying a regtest address, wiring a relay board).
+#
+# Run from the repo root:
+#   docker compose -f scripts/regtest/docker-compose.yml up --build
+#
+# All three services use network_mode: host rather than a bridge network on
+# purpose: Dex's issuer URL (http://localhost:5556/dex) has to resolve to
+# the same place for both your host browser (doing the OIDC redirect
+# dance) and dogecade's server-side token/JWKS calls, or discovery breaks.
+# Host networking sidesteps that split-brain entirely, at the cost of
+# fixed ports (no need to change anything if you're only running one
+# stack). This mirrors the production docker-compose.yml's own choice for
+# the same class of reason (reaching LAN relay boards/dogecoind).
+
+services:
+  dogecoind-regtest:
+    build:
+      context: ./dogecoind
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - dogecade-e2e-dogecoin-data:/data
+    environment:
+      DOGECOIN_RPC_USER: dogecade
+      DOGECOIN_RPC_PASSWORD: changeme
+      DOGECOIN_RPC_PORT: "18332"
+      DOGECOIN_P2P_PORT: "18444"
+      DOGECOIN_ZMQ_PORT: "28332"
+    healthcheck:
+      # "healthy" means entrypoint.sh's own chain bootstrap (wallet +
+      # mine-to-101-blocks) has already finished, not just that dogecoind's
+      # RPC port answers — the dogecade-seed-* services below need a loaded
+      # wallet and a mined chain to call getnewaddress/import against. This
+      # must be read-only: Docker keeps re-running a healthcheck on every
+      # interval for the container's whole lifetime, not just until it first
+      # passes, so an earlier version of this check that called
+      # `getnewaddress` kept reserving a fresh wallet key every 3s forever.
+      test: ["CMD-SHELL", "dogecoin-cli -regtest -rpcuser=dogecade -rpcpassword=changeme getblockchaininfo | grep -Eq '\"blocks\": *(1[0-9][0-9]|[2-9][0-9]{2,})'"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+
+  # Five one-shot services, chained by `condition: service_completed_
+  # successfully`, that make the stack click-through-ready on first `up`
+  # instead of greeting you with "out of deposit addresses", no admin
+  # access, and "no active relay binding" on your first test-fire: seed the
+  # Dex admin as a dogecade admin, generate+import a batch of regtest
+  # deposit addresses, create one demo machine, register a relay board
+  # pointing at scripts/regtest/fake_relay.pl, and bind that board to the
+  # demo machine. Each just invokes a general-purpose `dogecade` CLI
+  # subcommand (`users seed-admins`, `addresses generate`,
+  # `machines create`, `relays create-board`, `relays bind` — see
+  # cmd/dogecade/main.go, all useful outside e2e too, e.g. topping up a live
+  # deployment's deposit pool or scripting a new machine's relay wiring)
+  # rather than baking any of this into the app or its Dockerfile; all five
+  # are safe to re-run against an already-seeded /data volume.
+  #
+  # The relay board this registers only points at a base URL; it doesn't
+  # require fake_relay.pl to actually be listening yet, so seeding order
+  # relative to starting fake_relay.pl by hand doesn't matter. But nothing
+  # will actually dispatch (test-fire, or a real redemption) until you do
+  # start it — see docs/E2E-TESTING.md's "Mock Tasmota" section.
+  dogecade-seed-admins: &dogecade-bootstrap-step
+    build:
+      context: ../..
+    network_mode: host
+    restart: "no"
+    depends_on:
+      dogecoind-regtest:
+        condition: service_healthy
+    volumes:
+      - dogecade-e2e-data:/data
+    environment:
+      DOGECADE_DB_PATH: /data/dogecade.db
+      DOGECADE_BASE_URL: http://localhost:8080
+      DOGECOIND_RPC_URL: "http://127.0.0.1:18332"
+      DOGECOIND_RPC_USER: "dogecade"
+      DOGECOIND_RPC_PASS: "changeme"
+      # Dex's static "local" connector doesn't put config.yaml's raw
+      # userID in the ID token's sub claim: it base64-encodes a small
+      # protobuf of {user_id, conn_id} instead
+      # (\n$<userID>\x12\x05local), so this value is opaque and was
+      # captured from a real login's "oidc login" log line
+      # (internal/auth/handlers.go), not derived from config.yaml.
+      DOGECADE_ADMIN_SUBJECTS: "http://localhost:5556/dex|CiQwOGE4Njg0Yi1kYjg4LTRiNzMtOTBhOS0zY2QxNjYxZjU0NjYSBWxvY2Fs"
+    entrypoint: ["/usr/local/bin/dogecade"]
+    command: ["users", "seed-admins"]
+
+  dogecade-seed-addresses:
+    <<: *dogecade-bootstrap-step
+    depends_on:
+      dogecade-seed-admins:
+        condition: service_completed_successfully
+    command: ["addresses", "generate", "--count=10", "--purpose=token_deposit"]
+
+  dogecade-seed-machine:
+    <<: *dogecade-bootstrap-step
+    depends_on:
+      dogecade-seed-addresses:
+        condition: service_completed_successfully
+    command: ["machines", "create", "cabinet-1", "Demo Cabinet"]
+
+  dogecade-seed-relay-board:
+    <<: *dogecade-bootstrap-step
+    depends_on:
+      dogecade-seed-machine:
+        condition: service_completed_successfully
+    # 127.0.0.1:9001 reaches your host directly because this service (like
+    # the rest of the stack) uses network_mode: host; run fake_relay.pl on
+    # that port (see docs/E2E-TESTING.md) for dispatch to actually succeed.
+    command: ["relays", "create-board", "fake-relay", "http://127.0.0.1:9001"]
+
+  dogecade-seed-relay-bind:
+    <<: *dogecade-bootstrap-step
+    depends_on:
+      dogecade-seed-relay-board:
+        condition: service_completed_successfully
+    command: ["relays", "bind", "cabinet-1", "fake-relay", "1"]
+
+  dex:
+    image: dexidp/dex:v2.45.1
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./dex/config.yaml:/etc/dex/config.yaml:ro
+    command: ["dex", "serve", "/etc/dex/config.yaml"]
+
+  dogecade:
+    build:
+      context: ../..
+    network_mode: host
+    restart: unless-stopped
+    depends_on:
+      dogecoind-regtest:
+        condition: service_started
+      dex:
+        condition: service_started
+      dogecade-seed-relay-bind:
+        condition: service_completed_successfully
+    volumes:
+      - dogecade-e2e-data:/data
+    environment:
+      DOGECADE_DB_PATH: /data/dogecade.db
+      DOGECADE_BASE_URL: http://localhost:8080
+      DOGECADE_LISTEN_ADDR: ":8080"
+      DOGECOIND_RPC_URL: "http://127.0.0.1:18332"
+      DOGECOIND_RPC_USER: "dogecade"
+      DOGECOIND_RPC_PASS: "changeme"
+      DOGECOIND_ZMQ_ADDR: "tcp://127.0.0.1:28332"
+      # Pre-authorizes Dex's fixed "admin" static-password login
+      # (admin@dogecade.local) as a dogecade admin from the very first
+      # login, no DB edit needed. See dogecade-seed-admins above for why
+      # this value is an opaque Dex-issued sub, not config.yaml's userID.
+      DOGECADE_ADMIN_SUBJECTS: "http://localhost:5556/dex|CiQwOGE4Njg0Yi1kYjg4LTRiNzMtOTBhOS0zY2QxNjYxZjU0NjYSBWxvY2Fs"
+      DOGECADE_OIDC_ISSUER_URL: "http://localhost:5556/dex"
+      DOGECADE_OIDC_CLIENT_ID: "dogecade"
+      DOGECADE_OIDC_CLIENT_SECRET: "dogecade-dev-secret"
+      DOGECADE_SESSION_SECRET: "dogecade-e2e-local-session-secret-not-for-prod"
+
+volumes:
+  dogecade-e2e-dogecoin-data:
+  dogecade-e2e-data:

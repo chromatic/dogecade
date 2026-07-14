@@ -4,12 +4,14 @@ import (
 	"bufio"
 	"context"
 	"crypto/rand"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -43,7 +45,7 @@ var version = "dev"
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintf(os.Stderr, "Usage: dogecade <subcommand> [options]\n")
-		fmt.Fprintf(os.Stderr, "Subcommands: version, serve, addresses\n")
+		fmt.Fprintf(os.Stderr, "Subcommands: version, serve, addresses, relays, users, machines\n")
 		os.Exit(1)
 	}
 
@@ -73,9 +75,19 @@ func main() {
 			fmt.Fprintf(os.Stderr, "relays: %v\n", err)
 			os.Exit(1)
 		}
+	case "users":
+		if err := cmdUsers(ctx, args); err != nil {
+			fmt.Fprintf(os.Stderr, "users: %v\n", err)
+			os.Exit(1)
+		}
+	case "machines":
+		if err := cmdMachines(ctx, args); err != nil {
+			fmt.Fprintf(os.Stderr, "machines: %v\n", err)
+			os.Exit(1)
+		}
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown subcommand: %s\n", subcommand)
-		fmt.Fprintf(os.Stderr, "Available subcommands: version, serve, addresses, relays\n")
+		fmt.Fprintf(os.Stderr, "Available subcommands: version, serve, addresses, relays, users, machines\n")
 		os.Exit(1)
 	}
 }
@@ -328,7 +340,7 @@ func cmdServe(ctx context.Context, args []string) error {
 
 func cmdAddresses(ctx context.Context, args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("Usage: dogecade addresses <subcommand> [options]\nSubcommands: import")
+		return fmt.Errorf("Usage: dogecade addresses <subcommand> [options]\nSubcommands: import, generate")
 	}
 
 	subcommand := args[0]
@@ -337,8 +349,10 @@ func cmdAddresses(ctx context.Context, args []string) error {
 	switch subcommand {
 	case "import":
 		return cmdAddressesImport(ctx, subargs)
+	case "generate":
+		return cmdAddressesGenerate(ctx, subargs)
 	default:
-		return fmt.Errorf("Unknown addresses subcommand: %s\nAvailable: import", subcommand)
+		return fmt.Errorf("Unknown addresses subcommand: %s\nAvailable: import, generate", subcommand)
 	}
 }
 
@@ -445,7 +459,7 @@ func cmdAddressesImport(ctx context.Context, args []string) error {
 
 func cmdRelays(ctx context.Context, args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("Usage: dogecade relays <subcommand> [options]\nSubcommands: test-fire")
+		return fmt.Errorf("Usage: dogecade relays <subcommand> [options]\nSubcommands: test-fire, create-board, bind")
 	}
 
 	subcommand := args[0]
@@ -454,9 +468,185 @@ func cmdRelays(ctx context.Context, args []string) error {
 	switch subcommand {
 	case "test-fire":
 		return cmdRelaysTestFire(ctx, subargs)
+	case "create-board":
+		return cmdRelaysCreateBoard(ctx, subargs)
+	case "bind":
+		return cmdRelaysBind(ctx, subargs)
 	default:
-		return fmt.Errorf("Unknown relays subcommand: %s\nAvailable: test-fire", subcommand)
+		return fmt.Errorf("Unknown relays subcommand: %s\nAvailable: test-fire, create-board, bind", subcommand)
 	}
+}
+
+// cmdUsers dispatches `dogecade users` subcommands.
+func cmdUsers(ctx context.Context, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("Usage: dogecade users <subcommand> [options]\nSubcommands: seed-admins")
+	}
+
+	subcommand := args[0]
+	subargs := args[1:]
+
+	switch subcommand {
+	case "seed-admins":
+		return cmdUsersSeedAdmins(ctx, subargs)
+	default:
+		return fmt.Errorf("Unknown users subcommand: %s\nAvailable: seed-admins", subcommand)
+	}
+}
+
+// cmdUsersSeedAdmins creates (or confirms) a user row with is_admin=1 for
+// every issuer|subject pair in DOGECADE_ADMIN_SUBJECTS, instead of relying
+// solely on isAdmin-at-first-login. Useful any time that env var changes on
+// a deployment that already has users (adding an admin later still needs a
+// real first login today, since GetOrCreateBySubjectHash only applies
+// isAdmin at row creation) or when you want an admin account to exist
+// before anyone signs in — e.g. so DOGECADE_ADMIN_SUBJECTS's exact issuer
+// string is guaranteed to match this account regardless of how faithfully
+// the identity provider's ID token echoes it back at login time (trailing
+// slash, container-vs-public hostname, etc). Idempotent: re-running it is a
+// no-op for subjects that already have a row.
+func cmdUsersSeedAdmins(ctx context.Context, args []string) error {
+	fs := flag.NewFlagSet("users seed-admins", flag.ExitOnError)
+	fs.Parse(args)
+
+	cfg, err := config.Load(os.Getenv)
+	if err != nil {
+		return fmt.Errorf("configuration error: %w", err)
+	}
+
+	s, err := store.Open(cfg.DBPath)
+	if err != nil {
+		return fmt.Errorf("failed to open database: %w", err)
+	}
+	defer s.Close()
+
+	adminSubjects := auth.ParseAdminSubjects(cfg.AdminSubjects)
+	if len(adminSubjects) == 0 {
+		fmt.Println("DOGECADE_ADMIN_SUBJECTS is empty; nothing to seed")
+		return nil
+	}
+
+	usersSvc := services.NewUsersService(s)
+	for _, as := range adminSubjects {
+		hash := auth.SubjectHash(as.Issuer, as.Subject)
+		user, err := usersSvc.GetOrCreateBySubjectHash(ctx, hash, "Admin", true)
+		if err != nil {
+			return fmt.Errorf("failed to seed admin user for issuer %q: %w", as.Issuer, err)
+		}
+		fmt.Printf("Admin user ready: issuer=%q subject=%q user_id=%d is_admin=%v\n", as.Issuer, as.Subject, user.ID, user.IsAdmin)
+	}
+	return nil
+}
+
+// cmdAddressesGenerate generates count fresh addresses from the configured
+// Dogecoin node and imports them with the given purpose — the same "top up
+// the deposit pool" task an operator would otherwise do by hand with
+// dogecoin-cli getnewaddress plus `dogecade addresses import`, collapsed
+// into one step for scripting (cron, container startup, CI).
+func cmdAddressesGenerate(ctx context.Context, args []string) error {
+	fs := flag.NewFlagSet("addresses generate", flag.ExitOnError)
+	count := fs.Int("count", 10, "number of addresses to generate and import")
+	purpose := fs.String("purpose", "token_deposit", "address purpose: token_deposit or machine_direct")
+	fs.Parse(args)
+
+	if *purpose != "token_deposit" && *purpose != "machine_direct" {
+		return fmt.Errorf("invalid --purpose %q: must be token_deposit or machine_direct", *purpose)
+	}
+	if *count < 1 {
+		return fmt.Errorf("--count must be at least 1")
+	}
+
+	cfg, err := config.Load(os.Getenv)
+	if err != nil {
+		return fmt.Errorf("configuration error: %w", err)
+	}
+	if cfg.DogecoinRPCURL == "" {
+		return fmt.Errorf("DOGECOIND_RPC_URL is not configured; a node is required to generate addresses")
+	}
+
+	s, err := store.Open(cfg.DBPath)
+	if err != nil {
+		return fmt.Errorf("failed to open database: %w", err)
+	}
+	defer s.Close()
+
+	nodeClient, err := corerpc.NewClient(cfg.DogecoinRPCURL, cfg.DogecoinRPCUser, cfg.DogecoinRPCPass)
+	if err != nil {
+		return fmt.Errorf("failed to create node client: %w", err)
+	}
+
+	addrs := make([]string, 0, *count)
+	for i := 0; i < *count; i++ {
+		addr, err := nodeClient.GetNewAddress(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to generate address %d/%d: %w", i+1, *count, err)
+		}
+		addrs = append(addrs, addr)
+	}
+
+	batchSvc := services.NewAddressBatchService(s)
+	batchID, err := batchSvc.ImportBatch(ctx, "addresses generate", addrs, nodeClient, *purpose)
+	if err != nil {
+		return fmt.Errorf("failed to import generated addresses: %w", err)
+	}
+	fmt.Printf("Generated and imported %d addresses (batch %d, purpose %s)\n", len(addrs), batchID, *purpose)
+	return nil
+}
+
+// cmdMachines dispatches `dogecade machines` subcommands.
+func cmdMachines(ctx context.Context, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("Usage: dogecade machines <subcommand> [options]\nSubcommands: create")
+	}
+
+	subcommand := args[0]
+	subargs := args[1:]
+
+	switch subcommand {
+	case "create":
+		return cmdMachinesCreate(ctx, subargs)
+	default:
+		return fmt.Errorf("Unknown machines subcommand: %s\nAvailable: create", subcommand)
+	}
+}
+
+// cmdMachinesCreate is a CLI equivalent of the admin console's "add
+// machine" form (POST /admin/machines) — useful for scripting a machine
+// into existence without a browser session, e.g. provisioning tooling or
+// local setup. Treats an already-taken slug as a success, not an error, so
+// it's safe to call repeatedly (container startup, setup scripts).
+func cmdMachinesCreate(ctx context.Context, args []string) error {
+	fs := flag.NewFlagSet("machines create", flag.ExitOnError)
+	fs.Parse(args)
+
+	if fs.NArg() < 2 {
+		return fmt.Errorf("Usage: dogecade machines create <slug> <name>")
+	}
+	slug := fs.Arg(0)
+	name := fs.Arg(1)
+
+	cfg, err := config.Load(os.Getenv)
+	if err != nil {
+		return fmt.Errorf("configuration error: %w", err)
+	}
+
+	s, err := store.Open(cfg.DBPath)
+	if err != nil {
+		return fmt.Errorf("failed to open database: %w", err)
+	}
+	defer s.Close()
+
+	machinesSvc := services.NewMachinesService(s)
+	id, err := machinesSvc.Create(ctx, slug, name)
+	switch {
+	case err == nil:
+		fmt.Printf("Created machine %q (id %d)\n", slug, id)
+	case errors.Is(err, services.ErrMachineSlugTaken):
+		fmt.Printf("Machine %q already exists; skipping\n", slug)
+	default:
+		return fmt.Errorf("failed to create machine: %w", err)
+	}
+	return nil
 }
 
 func cmdRelaysTestFire(ctx context.Context, args []string) error {
@@ -494,5 +684,96 @@ func cmdRelaysTestFire(ctx context.Context, args []string) error {
 	}
 
 	fmt.Printf("Test-fire pulse sent to machine %q\n", slug)
+	return nil
+}
+
+// cmdRelaysCreateBoard is a CLI equivalent of the admin console's "add relay
+// board" form (POST /admin/boards) — useful for scripting a board into
+// existence without a browser session, e.g. local setup or provisioning
+// tooling. Treats an already-taken name as a success, not an error, so it's
+// safe to call repeatedly (container startup, setup scripts).
+func cmdRelaysCreateBoard(ctx context.Context, args []string) error {
+	fs := flag.NewFlagSet("relays create-board", flag.ExitOnError)
+	fs.Parse(args)
+
+	if fs.NArg() < 2 {
+		return fmt.Errorf("Usage: dogecade relays create-board <name> <base-url>")
+	}
+	name := fs.Arg(0)
+	baseURL := fs.Arg(1)
+
+	cfg, err := config.Load(os.Getenv)
+	if err != nil {
+		return fmt.Errorf("configuration error: %w", err)
+	}
+
+	s, err := store.Open(cfg.DBPath)
+	if err != nil {
+		return fmt.Errorf("failed to open database: %w", err)
+	}
+	defer s.Close()
+
+	relaysSvc := services.NewRelaysService(s)
+	id, err := relaysSvc.CreateBoard(ctx, name, baseURL)
+	switch {
+	case err == nil:
+		fmt.Printf("Created relay board %q (id %d, base_url %s)\n", name, id, baseURL)
+	case errors.Is(err, services.ErrBoardNameTaken):
+		fmt.Printf("Relay board %q already exists; skipping\n", name)
+	default:
+		return fmt.Errorf("failed to create relay board: %w", err)
+	}
+	return nil
+}
+
+// cmdRelaysBind is a CLI equivalent of the admin console's "bind relay"
+// form (POST /admin/relays/bind), looking the machine and board up by their
+// human-readable slug/name rather than requiring numeric ids. Treats an
+// already-bound machine as a success, not an error (ErrBindingConflict), so
+// it's safe to call repeatedly against an already-seeded volume.
+func cmdRelaysBind(ctx context.Context, args []string) error {
+	fs := flag.NewFlagSet("relays bind", flag.ExitOnError)
+	fs.Parse(args)
+
+	if fs.NArg() < 3 {
+		return fmt.Errorf("Usage: dogecade relays bind <machine-slug> <board-name> <relay-number>")
+	}
+	machineSlug := fs.Arg(0)
+	boardName := fs.Arg(1)
+	relayNumber, err := strconv.Atoi(fs.Arg(2))
+	if err != nil {
+		return fmt.Errorf("invalid relay-number %q: %w", fs.Arg(2), err)
+	}
+
+	cfg, err := config.Load(os.Getenv)
+	if err != nil {
+		return fmt.Errorf("configuration error: %w", err)
+	}
+
+	s, err := store.Open(cfg.DBPath)
+	if err != nil {
+		return fmt.Errorf("failed to open database: %w", err)
+	}
+	defer s.Close()
+
+	var machineID int64
+	if err := s.DB().QueryRowContext(ctx, "SELECT id FROM machines WHERE slug = ?", machineSlug).Scan(&machineID); err != nil {
+		return fmt.Errorf("failed to find machine %q: %w", machineSlug, err)
+	}
+	var boardID int64
+	if err := s.DB().QueryRowContext(ctx, "SELECT id FROM relay_boards WHERE name = ?", boardName).Scan(&boardID); err != nil {
+		return fmt.Errorf("failed to find relay board %q: %w", boardName, err)
+	}
+
+	relaysSvc := services.NewRelaysService(s)
+	id, err := relaysSvc.Bind(ctx, machineID, boardID, relayNumber)
+	switch {
+	case err == nil:
+		fmt.Printf("Bound machine %q to board %q relay %d (binding %d)\n", machineSlug, boardName, relayNumber, id)
+	case errors.Is(err, services.ErrBindingConflict):
+		fmt.Printf("Machine %q already has an active relay binding; skipping\n", machineSlug)
+	default:
+		return fmt.Errorf("failed to bind relay: %w", err)
+	}
 	return nil
 }

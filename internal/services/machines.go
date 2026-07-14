@@ -121,6 +121,26 @@ func (svc *MachinesService) Create(ctx context.Context, slug, name string) (int6
 	return id, nil
 }
 
+// Update renames a machine's slug and display name. Slug changes take effect
+// immediately for the customer-facing /m/{slug} URL and any QR codes that
+// encode it, so already-printed/posted QR codes pointing at the old slug
+// will 404 once this runs; regenerate and reprint them from
+// GET /admin/machines/{id}/qr afterward. Returns ErrMachineSlugTaken if the
+// new slug collides with a different machine.
+func (svc *MachinesService) Update(ctx context.Context, id int64, slug, name string) error {
+	_, err := svc.store.DB().ExecContext(ctx,
+		"UPDATE machines SET slug = ?, name = ? WHERE id = ?",
+		slug, name, id,
+	)
+	if err != nil {
+		if isUniqueConstraintErr(err) {
+			return ErrMachineSlugTaken
+		}
+		return fmt.Errorf("failed to update machine %d: %w", id, err)
+	}
+	return nil
+}
+
 // SetActive enables or disables a machine (disabled machines are hidden from
 // the customer-facing /machines list and can't be redeemed against).
 func (svc *MachinesService) SetActive(ctx context.Context, id int64, active bool) error {

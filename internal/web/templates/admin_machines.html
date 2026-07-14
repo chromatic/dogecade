@@ -16,8 +16,13 @@
         <td><a href="/admin/machines/{{.ID}}/qr" title="Print QR for {{.Name}}">
           <img class="qr-thumb" src="{{index $machineQR .ID}}" alt="QR code for {{.Name}}">
         </a></td>
-        <td>{{.Slug}}</td>
-        <td>{{.Name}}</td>
+        <td colspan="2">
+          <form class="inline-admin" method="post" action="/admin/machines/{{.ID}}/edit">
+            <input type="text" name="slug" value="{{.Slug}}" required size="12">
+            <input type="text" name="name" value="{{.Name}}" required size="16">
+            <button type="submit" class="button secondary">Save</button>
+          </form>
+        </td>
         <td><span class="badge {{if .IsActive}}active{{else}}inactive{{end}}">{{if .IsActive}}active{{else}}inactive{{end}}</span></td>
         <td>
           <form class="inline-admin" method="post" action="/admin/machines/{{.ID}}/toggle">
@@ -44,6 +49,10 @@
   <p class="notice">After adding a machine, use the QR thumbnail (or "Print
   QR") above to get a scannable code linking straight to its customer page
   &mdash; print and stick it on the cabinet.</p>
+  <p class="notice">Editing a machine's slug changes its customer-facing
+  <code>/m/{slug}</code> URL immediately &mdash; any QR code already printed
+  for the old slug will stop working, so reprint it from "Print QR" after
+  saving.</p>
 </div>
 
 <div class="admin-section">

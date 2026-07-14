@@ -58,6 +58,9 @@ func ValidateAddress(addr string) (bool, error) {
 		0x16: true, // mainnet P2SH
 		0x71: true, // testnet P2PKH
 		0xc4: true, // testnet P2SH
+		0x6f: true, // regtest P2PKH (Dogecoin Core's regtest chainparams reuse
+		// Bitcoin's testnet byte here rather than Dogecoin's own 0x71, so a
+		// real `dogecoind -regtest`'s addresses need this to validate)
 	}
 
 	if !validVersionBytes[versionByte] {

@@ -74,6 +74,7 @@ func (s *Server) RegisterAdminRoutes(deps AdminDeps) error {
 
 	s.mux.Handle("GET /admin/machines", admin(http.HandlerFunc(s.handleAdminMachinesShow)))
 	s.mux.Handle("POST /admin/machines", admin(http.HandlerFunc(s.handleAdminMachineCreate)))
+	s.mux.Handle("POST /admin/machines/{id}/edit", admin(http.HandlerFunc(s.handleAdminMachineEdit)))
 	s.mux.Handle("POST /admin/machines/{id}/toggle", admin(http.HandlerFunc(s.handleAdminMachineToggle)))
 	s.mux.Handle("GET /admin/machines/{id}/qr", admin(http.HandlerFunc(s.handleAdminMachineQR)))
 	s.mux.Handle("POST /admin/boards", admin(http.HandlerFunc(s.handleAdminBoardCreate)))
@@ -580,6 +581,38 @@ func (s *Server) handleAdminMachineCreate(w http.ResponseWriter, r *http.Request
 		return
 	}
 	s.logAdminAction(r, "machine.create", fmt.Sprintf("machine:%d", id), fmt.Sprintf("slug=%s name=%s", slug, name))
+	s.adminRedirect(w, r, "/admin/machines")
+}
+
+func (s *Server) handleAdminMachineEdit(w http.ResponseWriter, r *http.Request) {
+	id, err := pathID(r)
+	if err != nil {
+		http.Error(w, "invalid machine id", http.StatusBadRequest)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	slug := r.FormValue("slug")
+	name := r.FormValue("name")
+	if err := s.adminDeps.Machines.Update(r.Context(), id, slug, name); err != nil {
+		data, loadErr := s.loadAdminMachinesData(r.Context())
+		if loadErr != nil {
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		data.User = adminUser(r)
+		if errors.Is(err, services.ErrMachineSlugTaken) {
+			data.Error = "That machine slug is already in use."
+		} else {
+			s.logger.Error("failed to update machine", "id", id, "err", err)
+			data.Error = "Failed to update machine."
+		}
+		s.renderPage(w, "admin_machines.html", data)
+		return
+	}
+	s.logAdminAction(r, "machine.edit", fmt.Sprintf("machine:%d", id), fmt.Sprintf("slug=%s name=%s", slug, name))
 	s.adminRedirect(w, r, "/admin/machines")
 }
 
