@@ -228,7 +228,7 @@ func (c *Client) call(ctx context.Context, method string, params interface{}, re
 	if err != nil {
 		return fmt.Errorf("RPC request failed: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	// Read response body
 	respBody, err := io.ReadAll(httpResp.Body)

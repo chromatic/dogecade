@@ -100,16 +100,16 @@ func (j *RotationJob) CheckAll(ctx context.Context) error {
 	for rows.Next() {
 		var c rotationCandidate
 		if err := rows.Scan(&c.machineID, &c.useCount, &c.assignedAt); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return fmt.Errorf("failed to scan direct-pay address: %w", err)
 		}
 		candidates = append(candidates, c)
 	}
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		_ = rows.Close()
 		return err
 	}
-	rows.Close()
+	_ = rows.Close()
 
 	for _, c := range candidates {
 		due := rotateAfterUses > 0 && c.useCount >= rotateAfterUses

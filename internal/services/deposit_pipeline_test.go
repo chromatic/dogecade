@@ -36,19 +36,6 @@ func getDeposit(t *testing.T, ctx context.Context, s *store.Store, txid string, 
 	return row
 }
 
-// countUnackedAlerts returns the count of unacked alerts of a given kind.
-func countUnackedAlerts(t *testing.T, ctx context.Context, s *store.Store, kind string) int {
-	var count int
-	err := s.DB().QueryRowContext(ctx,
-		"SELECT COUNT(*) FROM alerts WHERE kind = ? AND acked_at IS NULL",
-		kind,
-	).Scan(&count)
-	if err != nil {
-		t.Fatalf("failed to count alerts: %v", err)
-	}
-	return count
-}
-
 // countUnackedAlertsForDeposit returns the count of unacked alerts of a given kind for a specific deposit.
 func countUnackedAlertsForDeposit(t *testing.T, ctx context.Context, s *store.Store, kind string, depositID int64) int {
 	var count int

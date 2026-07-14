@@ -73,7 +73,7 @@ func (svc *LedgerService) CreditPurchase(ctx context.Context, userID, depositID,
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if err := svc.creditPurchaseTx(ctx, tx, userID, depositID, tokens); err != nil {
 		return err
@@ -103,7 +103,7 @@ func (svc *LedgerService) DebitRedemption(ctx context.Context, userID, pulseID i
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if err := svc.debitRedemptionTx(ctx, tx, userID, pulseID); err != nil {
 		return err
@@ -165,7 +165,7 @@ func (svc *LedgerService) History(ctx context.Context, userID int64, limit int) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to query ledger history for user %d: %w", userID, err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var entries []LedgerEntry
 	for rows.Next() {

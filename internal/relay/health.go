@@ -106,7 +106,7 @@ func (h *BoardHealthChecker) fetchActiveBoards(ctx context.Context) ([]activeBoa
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var boards []activeBoard
 	for rows.Next() {

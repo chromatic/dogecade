@@ -85,7 +85,7 @@ func TestDispatchStubBoardSlowTimesOutAndRetries(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(300 * time.Millisecond)
-		w.Write([]byte(`{"Power1":"ON"}`))
+		_, _ = w.Write([]byte(`{"Power1":"ON"}`))
 	}))
 	defer srv.Close()
 
@@ -122,10 +122,10 @@ func TestDispatchStubBoard500sThenRecoversMidRetry(t *testing.T) {
 		n := requestCount.Add(1)
 		if n <= 2 {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(`internal error`))
+			_, _ = w.Write([]byte(`internal error`))
 			return
 		}
-		w.Write([]byte(`{"Power1":"ON"}`))
+		_, _ = w.Write([]byte(`{"Power1":"ON"}`))
 	}))
 	defer srv.Close()
 

@@ -17,7 +17,7 @@ func TestGetMinConfirmationsDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("store.Open() failed: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	svc := NewSettingsService(s)
 	ctx := context.Background()
@@ -39,7 +39,7 @@ func TestSetAndGetMinConfirmations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("store.Open() failed: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	svc := NewSettingsService(s)
 	ctx := context.Background()
@@ -67,7 +67,7 @@ func TestGetZeroConfMaxKoinuDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("store.Open() failed: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	svc := NewSettingsService(s)
 	ctx := context.Background()
@@ -89,7 +89,7 @@ func TestSetAndGetZeroConfMaxKoinu(t *testing.T) {
 	if err != nil {
 		t.Fatalf("store.Open() failed: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	svc := NewSettingsService(s)
 	ctx := context.Background()
@@ -130,14 +130,16 @@ func TestSettingsPersistAfterReopen(t *testing.T) {
 		t.Fatalf("SetZeroConfMaxKoinu() failed: %v", err)
 	}
 
-	s1.Close()
+	if err := s1.Close(); err != nil {
+		t.Fatalf("s1.Close() failed: %v", err)
+	}
 
 	// Second session: verify values persisted
 	s2, err := store.Open(dbPath)
 	if err != nil {
 		t.Fatalf("store.Open() after reopen failed: %v", err)
 	}
-	defer s2.Close()
+	defer func() { _ = s2.Close() }()
 
 	svc2 := NewSettingsService(s2)
 
@@ -166,7 +168,7 @@ func TestSeedFromEnvNoEnvironmentVariables(t *testing.T) {
 	if err != nil {
 		t.Fatalf("store.Open() failed: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	svc := NewSettingsService(s)
 	ctx := context.Background()
@@ -209,7 +211,7 @@ func TestSeedFromEnvDoesNotOverwriteExisting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("store.Open() failed: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	svc := NewSettingsService(s)
 	ctx := context.Background()
@@ -249,7 +251,7 @@ func TestPoolWarnThresholdGetSetRoundtrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("store.Open() failed: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	svc := NewSettingsService(s)
 	ctx := context.Background()
@@ -286,7 +288,7 @@ func TestPoolUrgentThresholdGetSetRoundtrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("store.Open() failed: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	svc := NewSettingsService(s)
 	ctx := context.Background()
@@ -323,7 +325,7 @@ func TestChainCursorGetSetRoundtrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("store.Open() failed: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	svc := NewSettingsService(s)
 	ctx := context.Background()
@@ -360,7 +362,7 @@ func TestTokenPriceKoinuGetSetRoundtrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("store.Open() failed: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	svc := NewSettingsService(s)
 	ctx := context.Background()
@@ -395,7 +397,7 @@ func TestAllSettingsDefaultValues(t *testing.T) {
 	if err != nil {
 		t.Fatalf("store.Open() failed: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	svc := NewSettingsService(s)
 	ctx := context.Background()

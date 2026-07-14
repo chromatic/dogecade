@@ -67,7 +67,7 @@ func (svc *DirectPayService) Activate(ctx context.Context, machineID int64) (str
 	if err != nil {
 		return "", fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	address, err := claimPoolAddressForMachine(ctx, tx, machineID)
 	if err != nil {
@@ -124,7 +124,7 @@ func (svc *DirectPayService) Rotate(ctx context.Context, machineID int64) (strin
 	if err != nil {
 		return "", fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Check for a replacement before touching the currently active address,
 	// so a rotation attempt during an empty pool can never leave the
@@ -228,7 +228,7 @@ func (svc *DirectPayService) CreditDeposit(ctx context.Context, depositID, addre
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err := tx.ExecContext(ctx,
 		"UPDATE deposits SET remainder_koinu = ? WHERE id = ?", remainder, depositID,

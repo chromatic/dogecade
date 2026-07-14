@@ -94,7 +94,7 @@ func main() {
 
 func cmdVersion(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("version", flag.ExitOnError)
-	fs.Parse(args)
+	_ = fs.Parse(args)
 
 	fmt.Println(version)
 	return nil
@@ -102,7 +102,7 @@ func cmdVersion(ctx context.Context, args []string) error {
 
 func cmdServe(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
-	fs.Parse(args)
+	_ = fs.Parse(args)
 
 	// Create structured logger (JSON for services)
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
@@ -129,7 +129,7 @@ func cmdServe(ctx context.Context, args []string) error {
 		logger.Error("failed to open database store", "error", err)
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	logger.Info("Database connected")
 
@@ -340,7 +340,7 @@ func cmdServe(ctx context.Context, args []string) error {
 
 func cmdAddresses(ctx context.Context, args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("Usage: dogecade addresses <subcommand> [options]\nSubcommands: import, generate")
+		return fmt.Errorf("usage: dogecade addresses <subcommand> [options]\nSubcommands: import, generate")
 	}
 
 	subcommand := args[0]
@@ -352,17 +352,17 @@ func cmdAddresses(ctx context.Context, args []string) error {
 	case "generate":
 		return cmdAddressesGenerate(ctx, subargs)
 	default:
-		return fmt.Errorf("Unknown addresses subcommand: %s\nAvailable: import, generate", subcommand)
+		return fmt.Errorf("unknown addresses subcommand: %s\nAvailable: import, generate", subcommand)
 	}
 }
 
 func cmdAddressesImport(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("addresses import", flag.ExitOnError)
 	purpose := fs.String("purpose", "token_deposit", "address purpose: token_deposit or machine_direct")
-	fs.Parse(args)
+	_ = fs.Parse(args)
 
 	if fs.NArg() < 1 {
-		return fmt.Errorf("Usage: dogecade addresses import [--purpose=token_deposit|machine_direct] <file>")
+		return fmt.Errorf("usage: dogecade addresses import [--purpose=token_deposit|machine_direct] <file>")
 	}
 	if *purpose != "token_deposit" && *purpose != "machine_direct" {
 		return fmt.Errorf("invalid --purpose %q: must be token_deposit or machine_direct", *purpose)
@@ -381,7 +381,7 @@ func cmdAddressesImport(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	// Optional: try to connect to the Dogecoin node if configured
 	var node services.NodeImporter
@@ -404,7 +404,7 @@ func cmdAddressesImport(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	var addrs []string
 	scanner := bufio.NewScanner(file)
@@ -459,7 +459,7 @@ func cmdAddressesImport(ctx context.Context, args []string) error {
 
 func cmdRelays(ctx context.Context, args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("Usage: dogecade relays <subcommand> [options]\nSubcommands: test-fire, create-board, bind")
+		return fmt.Errorf("usage: dogecade relays <subcommand> [options]\nSubcommands: test-fire, create-board, bind")
 	}
 
 	subcommand := args[0]
@@ -473,14 +473,14 @@ func cmdRelays(ctx context.Context, args []string) error {
 	case "bind":
 		return cmdRelaysBind(ctx, subargs)
 	default:
-		return fmt.Errorf("Unknown relays subcommand: %s\nAvailable: test-fire, create-board, bind", subcommand)
+		return fmt.Errorf("unknown relays subcommand: %s\nAvailable: test-fire, create-board, bind", subcommand)
 	}
 }
 
 // cmdUsers dispatches `dogecade users` subcommands.
 func cmdUsers(ctx context.Context, args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("Usage: dogecade users <subcommand> [options]\nSubcommands: seed-admins")
+		return fmt.Errorf("usage: dogecade users <subcommand> [options]\nSubcommands: seed-admins")
 	}
 
 	subcommand := args[0]
@@ -490,7 +490,7 @@ func cmdUsers(ctx context.Context, args []string) error {
 	case "seed-admins":
 		return cmdUsersSeedAdmins(ctx, subargs)
 	default:
-		return fmt.Errorf("Unknown users subcommand: %s\nAvailable: seed-admins", subcommand)
+		return fmt.Errorf("unknown users subcommand: %s\nAvailable: seed-admins", subcommand)
 	}
 }
 
@@ -507,7 +507,7 @@ func cmdUsers(ctx context.Context, args []string) error {
 // no-op for subjects that already have a row.
 func cmdUsersSeedAdmins(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("users seed-admins", flag.ExitOnError)
-	fs.Parse(args)
+	_ = fs.Parse(args)
 
 	cfg, err := config.Load(os.Getenv)
 	if err != nil {
@@ -518,7 +518,7 @@ func cmdUsersSeedAdmins(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	adminSubjects := auth.ParseAdminSubjects(cfg.AdminSubjects)
 	if len(adminSubjects) == 0 {
@@ -547,7 +547,7 @@ func cmdAddressesGenerate(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("addresses generate", flag.ExitOnError)
 	count := fs.Int("count", 10, "number of addresses to generate and import")
 	purpose := fs.String("purpose", "token_deposit", "address purpose: token_deposit or machine_direct")
-	fs.Parse(args)
+	_ = fs.Parse(args)
 
 	if *purpose != "token_deposit" && *purpose != "machine_direct" {
 		return fmt.Errorf("invalid --purpose %q: must be token_deposit or machine_direct", *purpose)
@@ -568,7 +568,7 @@ func cmdAddressesGenerate(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	nodeClient, err := corerpc.NewClient(cfg.DogecoinRPCURL, cfg.DogecoinRPCUser, cfg.DogecoinRPCPass)
 	if err != nil {
@@ -596,7 +596,7 @@ func cmdAddressesGenerate(ctx context.Context, args []string) error {
 // cmdMachines dispatches `dogecade machines` subcommands.
 func cmdMachines(ctx context.Context, args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("Usage: dogecade machines <subcommand> [options]\nSubcommands: create")
+		return fmt.Errorf("usage: dogecade machines <subcommand> [options]\nSubcommands: create")
 	}
 
 	subcommand := args[0]
@@ -606,7 +606,7 @@ func cmdMachines(ctx context.Context, args []string) error {
 	case "create":
 		return cmdMachinesCreate(ctx, subargs)
 	default:
-		return fmt.Errorf("Unknown machines subcommand: %s\nAvailable: create", subcommand)
+		return fmt.Errorf("unknown machines subcommand: %s\nAvailable: create", subcommand)
 	}
 }
 
@@ -617,10 +617,10 @@ func cmdMachines(ctx context.Context, args []string) error {
 // it's safe to call repeatedly (container startup, setup scripts).
 func cmdMachinesCreate(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("machines create", flag.ExitOnError)
-	fs.Parse(args)
+	_ = fs.Parse(args)
 
 	if fs.NArg() < 2 {
-		return fmt.Errorf("Usage: dogecade machines create <slug> <name>")
+		return fmt.Errorf("usage: dogecade machines create <slug> <name>")
 	}
 	slug := fs.Arg(0)
 	name := fs.Arg(1)
@@ -634,7 +634,7 @@ func cmdMachinesCreate(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	machinesSvc := services.NewMachinesService(s)
 	id, err := machinesSvc.Create(ctx, slug, name)
@@ -651,10 +651,10 @@ func cmdMachinesCreate(ctx context.Context, args []string) error {
 
 func cmdRelaysTestFire(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("relays test-fire", flag.ExitOnError)
-	fs.Parse(args)
+	_ = fs.Parse(args)
 
 	if fs.NArg() < 1 {
-		return fmt.Errorf("Usage: dogecade relays test-fire <machine-slug>")
+		return fmt.Errorf("usage: dogecade relays test-fire <machine-slug>")
 	}
 	slug := fs.Arg(0)
 
@@ -667,7 +667,7 @@ func cmdRelaysTestFire(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	var machineID int64
 	err = s.DB().QueryRowContext(ctx, "SELECT id FROM machines WHERE slug = ?", slug).Scan(&machineID)
@@ -694,10 +694,10 @@ func cmdRelaysTestFire(ctx context.Context, args []string) error {
 // safe to call repeatedly (container startup, setup scripts).
 func cmdRelaysCreateBoard(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("relays create-board", flag.ExitOnError)
-	fs.Parse(args)
+	_ = fs.Parse(args)
 
 	if fs.NArg() < 2 {
-		return fmt.Errorf("Usage: dogecade relays create-board <name> <base-url>")
+		return fmt.Errorf("usage: dogecade relays create-board <name> <base-url>")
 	}
 	name := fs.Arg(0)
 	baseURL := fs.Arg(1)
@@ -711,7 +711,7 @@ func cmdRelaysCreateBoard(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	relaysSvc := services.NewRelaysService(s)
 	id, err := relaysSvc.CreateBoard(ctx, name, baseURL)
@@ -733,10 +733,10 @@ func cmdRelaysCreateBoard(ctx context.Context, args []string) error {
 // it's safe to call repeatedly against an already-seeded volume.
 func cmdRelaysBind(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("relays bind", flag.ExitOnError)
-	fs.Parse(args)
+	_ = fs.Parse(args)
 
 	if fs.NArg() < 3 {
-		return fmt.Errorf("Usage: dogecade relays bind <machine-slug> <board-name> <relay-number>")
+		return fmt.Errorf("usage: dogecade relays bind <machine-slug> <board-name> <relay-number>")
 	}
 	machineSlug := fs.Arg(0)
 	boardName := fs.Arg(1)
@@ -754,7 +754,7 @@ func cmdRelaysBind(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	var machineID int64
 	if err := s.DB().QueryRowContext(ctx, "SELECT id FROM machines WHERE slug = ?", machineSlug).Scan(&machineID); err != nil {

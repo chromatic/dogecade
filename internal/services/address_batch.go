@@ -94,7 +94,7 @@ func (svc *AddressBatchService) ImportBatch(
 	if err != nil {
 		return 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback() // Rollback is a no-op if already committed
+	defer func() { _ = tx.Rollback() }() // Rollback is a no-op if already committed
 
 	// Insert batch row
 	now := time.Now().UTC().Format(time.RFC3339)

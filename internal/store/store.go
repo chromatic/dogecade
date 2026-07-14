@@ -49,7 +49,7 @@ func Open(path string) (*Store, error) {
 	}
 	for _, pragma := range pragmas {
 		if _, err := db.Exec(pragma); err != nil {
-			db.Close()
+			_ = db.Close()
 			return nil, fmt.Errorf("failed to set pragma %q: %w", pragma, err)
 		}
 	}
@@ -58,7 +58,7 @@ func Open(path string) (*Store, error) {
 
 	// Run migrations.
 	if err := store.runMigrations(); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, err
 	}
 
@@ -151,7 +151,7 @@ func (s *Store) runMigrations() error {
 
 		_, err = tx.Exec(string(content))
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return fmt.Errorf("failed to execute migration %s: %w", migName, err)
 		}
 
@@ -161,7 +161,7 @@ func (s *Store) runMigrations() error {
 			version,
 		)
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return fmt.Errorf("failed to record migration %s in schema_migrations: %w", migName, err)
 		}
 

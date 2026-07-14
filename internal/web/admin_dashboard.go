@@ -31,7 +31,7 @@ func recentRedemptions(ctx context.Context, db *sql.DB, limit int) ([]recentRede
 	if err != nil {
 		return nil, fmt.Errorf("failed to list recent redemptions: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []recentRedemption
 	for rows.Next() {

@@ -41,7 +41,7 @@ func (svc *RedemptionService) Redeem(ctx context.Context, userID, machineID int6
 	if err != nil {
 		return 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var isActive bool
 	err = tx.QueryRowContext(ctx,

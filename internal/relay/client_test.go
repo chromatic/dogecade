@@ -14,7 +14,7 @@ func TestPulseSendsBacklogCommandWithPulseTimeAndPower(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotCmnd = r.URL.Query().Get("cmnd")
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"PulseTime1":"2","Power1":"ON"}`))
+		_, _ = w.Write([]byte(`{"PulseTime1":"2","Power1":"ON"}`))
 	}))
 	defer srv.Close()
 
@@ -33,7 +33,7 @@ func TestPulseUsesCustomPulseTime(t *testing.T) {
 	var gotCmnd string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotCmnd = r.URL.Query().Get("cmnd")
-		w.Write([]byte(`{"PulseTime3":"5","Power3":"ON"}`))
+		_, _ = w.Write([]byte(`{"PulseTime3":"5","Power3":"ON"}`))
 	}))
 	defer srv.Close()
 
@@ -51,7 +51,7 @@ func TestPulseUsesCustomPulseTime(t *testing.T) {
 func TestPulseReturnsErrorOnHTTPError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`error`))
+		_, _ = w.Write([]byte(`error`))
 	}))
 	defer srv.Close()
 
@@ -63,7 +63,7 @@ func TestPulseReturnsErrorOnHTTPError(t *testing.T) {
 
 func TestPulseReturnsErrorOnUnknownCommand(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"Command":"Unknown"}`))
+		_, _ = w.Write([]byte(`{"Command":"Unknown"}`))
 	}))
 	defer srv.Close()
 
@@ -83,7 +83,7 @@ func TestPulseReturnsErrorOnUnreachableBoard(t *testing.T) {
 func TestPulseRespectsContextTimeout(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(200 * time.Millisecond)
-		w.Write([]byte(`{"Power1":"ON"}`))
+		_, _ = w.Write([]byte(`{"Power1":"ON"}`))
 	}))
 	defer srv.Close()
 
@@ -102,7 +102,7 @@ func TestStatusParsesResponse(t *testing.T) {
 		if r.URL.Query().Get("cmnd") != "Status" {
 			t.Errorf("expected cmnd=Status, got %q", r.URL.Query().Get("cmnd"))
 		}
-		w.Write([]byte(`{"Status":{"Module":1,"DeviceName":"relay1"}}`))
+		_, _ = w.Write([]byte(`{"Status":{"Module":1,"DeviceName":"relay1"}}`))
 	}))
 	defer srv.Close()
 
@@ -127,7 +127,7 @@ func TestNewClientTrimsTrailingSlash(t *testing.T) {
 	var gotPath string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 

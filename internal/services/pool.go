@@ -38,7 +38,7 @@ func (svc *PoolService) Assign(ctx context.Context, purpose string) (address str
 	if err != nil {
 		return "", 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback() // No-op if already committed
+	defer func() { _ = tx.Rollback() }() // No-op if already committed
 
 	// Select the lowest-id pool row for this purpose
 	var id int64
@@ -135,7 +135,7 @@ func (svc *PoolService) CountsByState(ctx context.Context) (map[string]int, erro
 	if err != nil {
 		return nil, fmt.Errorf("failed to query address counts: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	counts := make(map[string]int)
 	for rows.Next() {
@@ -194,7 +194,7 @@ func (svc *PoolService) ListByState(ctx context.Context, state string, limit int
 	if err != nil {
 		return nil, fmt.Errorf("failed to list addresses in state %q: %w", state, err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var addrs []Address
 	for rows.Next() {
@@ -224,7 +224,7 @@ func (svc *PoolService) ListBatches(ctx context.Context) ([]AddressBatch, error)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list address batches: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var batches []AddressBatch
 	for rows.Next() {

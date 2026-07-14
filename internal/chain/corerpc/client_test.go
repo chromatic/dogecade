@@ -12,13 +12,6 @@ import (
 	"time"
 )
 
-// testServerWithHandler creates a test HTTP server with the given handler.
-// The caller is responsible for calling server.Close().
-func testServerWithHandler(t *testing.T, handler http.HandlerFunc) *httptest.Server {
-	t.Helper()
-	return httptest.NewServer(handler)
-}
-
 func TestNewClient_UnconfiguredURL(t *testing.T) {
 	// Should return ErrNotConfigured if URL is empty
 	client, err := NewClient("", "", "")
@@ -91,7 +84,7 @@ func TestGetBlockchainInfo_Success(t *testing.T) {
 			ID:    req.ID,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -178,7 +171,7 @@ func TestImportAddress_Success(t *testing.T) {
 			ID:     req.ID,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -239,7 +232,7 @@ func TestValidateAddress_Success(t *testing.T) {
 			ID:    req.ID,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -282,7 +275,7 @@ func TestValidateAddress_Invalid(t *testing.T) {
 			ID:    req.ID,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -326,7 +319,7 @@ func TestJSONRPCError_Response(t *testing.T) {
 			ID: req.ID,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -374,7 +367,7 @@ func TestContext_Cancellation(t *testing.T) {
 			ID:     1,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -410,7 +403,7 @@ func TestBasicAuth_HeaderSent(t *testing.T) {
 
 		body, _ := io.ReadAll(r.Body)
 		var req jsonRPCRequest
-		json.Unmarshal(body, &req)
+		_ = json.Unmarshal(body, &req)
 
 		resp := jsonRPCResponse{
 			Result: json.RawMessage([]byte("null")),
@@ -418,7 +411,7 @@ func TestBasicAuth_HeaderSent(t *testing.T) {
 			ID:     req.ID,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -477,7 +470,7 @@ func TestListSinceBlock_Success(t *testing.T) {
 			ID:    req.ID,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -550,7 +543,7 @@ func TestGetBlockHash_Success(t *testing.T) {
 			ID:     req.ID,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -576,7 +569,7 @@ func TestListSinceBlock_WithRemovedTransactions(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		var req jsonRPCRequest
-		json.Unmarshal(body, &req)
+		_ = json.Unmarshal(body, &req)
 
 		// Return response with both normal and removed transactions
 		resp := jsonRPCResponse{
@@ -611,7 +604,7 @@ func TestListSinceBlock_WithRemovedTransactions(t *testing.T) {
 			ID:    req.ID,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 

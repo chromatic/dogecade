@@ -36,7 +36,7 @@ func (svc *RelaysService) ListBoards(ctx context.Context) ([]RelayBoard, error) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to list relay boards: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var boards []RelayBoard
 	for rows.Next() {
@@ -107,7 +107,7 @@ func (svc *RelaysService) ListBindings(ctx context.Context) ([]MachineRelay, err
 	if err != nil {
 		return nil, fmt.Errorf("failed to list relay bindings: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var bindings []MachineRelay
 	for rows.Next() {

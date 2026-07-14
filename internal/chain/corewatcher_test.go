@@ -60,7 +60,7 @@ func testCoreWatcherSetup(t *testing.T) (*store.Store, *services.SettingsService
 
 func TestCoreWatcher_SingleReceiveTransaction(t *testing.T) {
 	s, settings := testCoreWatcherSetup(t)
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	ctx := context.Background()
 
@@ -152,7 +152,7 @@ func TestCoreWatcher_KoinuConversion(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			s, settings := testCoreWatcherSetup(t)
-			defer s.Close()
+			defer func() { _ = s.Close() }()
 
 			ctx := context.Background()
 
@@ -195,7 +195,7 @@ func TestCoreWatcher_KoinuConversion(t *testing.T) {
 
 func TestCoreWatcher_SendCategoryIgnored(t *testing.T) {
 	s, settings := testCoreWatcherSetup(t)
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	ctx := context.Background()
 
@@ -235,7 +235,7 @@ func TestCoreWatcher_SendCategoryIgnored(t *testing.T) {
 
 func TestCoreWatcher_CursorPersistence(t *testing.T) {
 	s, settings := testCoreWatcherSetup(t)
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	ctx := context.Background()
 
@@ -303,7 +303,7 @@ func TestCoreWatcher_CursorPersistence(t *testing.T) {
 
 func TestCoreWatcher_RescanReset(t *testing.T) {
 	s, settings := testCoreWatcherSetup(t)
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	ctx := context.Background()
 
@@ -329,7 +329,9 @@ func TestCoreWatcher_RescanReset(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Call Rescan from height 10
-	watcher.Rescan(ctx, 10)
+	if err := watcher.Rescan(ctx, 10); err != nil {
+		t.Fatalf("Rescan failed: %v", err)
+	}
 	time.Sleep(100 * time.Millisecond)
 
 	// Verify cursor was reset to block at height 10
@@ -341,7 +343,7 @@ func TestCoreWatcher_RescanReset(t *testing.T) {
 
 func TestCoreWatcher_UnconfirmedTransactions(t *testing.T) {
 	s, settings := testCoreWatcherSetup(t)
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	ctx := context.Background()
 
@@ -389,7 +391,7 @@ func TestCoreWatcher_NilBackendDoesntPanic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open store: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	settings := services.NewSettingsService(s)
 	ctx := context.Background()
@@ -415,7 +417,7 @@ func TestCoreWatcher_NilBackendDoesntPanic(t *testing.T) {
 // TestCoreWatcher_TriggerPoll tests that TriggerPoll sends a non-blocking request for an immediate poll.
 func TestCoreWatcher_TriggerPoll(t *testing.T) {
 	s, settings := testCoreWatcherSetup(t)
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	ctx := context.Background()
 
@@ -490,7 +492,7 @@ func TestCoreWatcher_TriggerPoll(t *testing.T) {
 
 func TestCoreWatcher_RemovedNotifications(t *testing.T) {
 	s, settings := testCoreWatcherSetup(t)
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	ctx := context.Background()
 
@@ -561,7 +563,7 @@ func TestCoreWatcher_RemovedNotifications(t *testing.T) {
 // TestCoreWatcher_StopIdempotency verifies that Stop() can be called multiple times safely.
 func TestCoreWatcher_StopIdempotency(t *testing.T) {
 	s, settings := testCoreWatcherSetup(t)
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	fake := &fakeCoreRPC{
 		transactions: map[string]corerpc.ListSinceBlockResult{},
@@ -580,7 +582,7 @@ func TestCoreWatcher_StopIdempotency(t *testing.T) {
 // and does not advance the cursor if a send is interrupted by context cancellation.
 func TestCoreWatcher_ContextCancellationDuringPoll(t *testing.T) {
 	s, settings := testCoreWatcherSetup(t)
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	fake := &fakeCoreRPC{
 		transactions: map[string]corerpc.ListSinceBlockResult{
@@ -628,7 +630,7 @@ func TestCoreWatcher_ContextCancellationDuringPoll(t *testing.T) {
 // even when the poll channel is full.
 func TestCoreWatcher_TriggerPollNonBlocking(t *testing.T) {
 	s, settings := testCoreWatcherSetup(t)
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	fake := &fakeCoreRPC{
 		transactions: map[string]corerpc.ListSinceBlockResult{},
@@ -659,7 +661,7 @@ func TestCoreWatcher_TriggerPollNonBlocking(t *testing.T) {
 // TestCoreWatcher_RescanWithNilBackend verifies Rescan returns nil for nil backend.
 func TestCoreWatcher_RescanWithNilBackend(t *testing.T) {
 	s, settings := testCoreWatcherSetup(t)
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	// Create watcher with nil backend
 	watcher := NewCoreWatcher(nil, settings)
@@ -675,7 +677,7 @@ func TestCoreWatcher_RescanWithNilBackend(t *testing.T) {
 // TestCoreWatcher_PollRPCError verifies that poll() returns error when ListSinceBlock fails.
 func TestCoreWatcher_PollRPCError(t *testing.T) {
 	s, settings := testCoreWatcherSetup(t)
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	fake := &fakeCoreRPC{
 		transactions:       map[string]corerpc.ListSinceBlockResult{},
@@ -698,7 +700,7 @@ func TestCoreWatcher_PollRPCError(t *testing.T) {
 // TestCoreWatcher_WatchIsNoOp verifies that Watch() is a no-op (doesn't error or panic).
 func TestCoreWatcher_WatchIsNoOp(t *testing.T) {
 	s, settings := testCoreWatcherSetup(t)
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	fake := &fakeCoreRPC{
 		transactions: map[string]corerpc.ListSinceBlockResult{},

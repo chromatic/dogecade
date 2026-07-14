@@ -37,7 +37,7 @@ func (svc *AlertsService) ListUnacked(ctx context.Context) ([]Alert, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to list unacked alerts: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var alerts []Alert
 	for rows.Next() {

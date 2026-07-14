@@ -46,7 +46,7 @@ func (svc *MachinesService) ListActive(ctx context.Context) ([]Machine, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to list machines: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var machines []Machine
 	for rows.Next() {
@@ -87,7 +87,7 @@ func (svc *MachinesService) ListAll(ctx context.Context) ([]Machine, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to list machines: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var machines []Machine
 	for rows.Next() {

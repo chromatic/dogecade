@@ -92,7 +92,7 @@ func (svc *UsersService) SearchByDisplayName(ctx context.Context, query string, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to search users: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var users []User
 	for rows.Next() {
@@ -128,7 +128,7 @@ func (svc *UsersService) Merge(ctx context.Context, fromID, toID int64) error {
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err := tx.ExecContext(ctx, "UPDATE token_ledger SET user_id = ? WHERE user_id = ?", toID, fromID); err != nil {
 		return fmt.Errorf("failed to reassign ledger entries: %w", err)

@@ -36,7 +36,7 @@ func TestImportBatchValidAddresses(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open store: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	svc := NewAddressBatchService(s)
 
@@ -161,7 +161,7 @@ func TestImportBatchWithMockNode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open store: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	svc := NewAddressBatchService(s)
 
@@ -215,7 +215,7 @@ func TestImportBatchWithNodeRegistrationFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open store: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	svc := NewAddressBatchService(s)
 
@@ -289,7 +289,7 @@ func TestImportBatchInvalidAddress(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open store: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	svc := NewAddressBatchService(s)
 
@@ -335,7 +335,7 @@ func TestImportBatchDuplicateInBatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open store: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	svc := NewAddressBatchService(s)
 
@@ -371,7 +371,7 @@ func TestImportBatchAddressAlreadyExists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open store: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	svc := NewAddressBatchService(s)
 

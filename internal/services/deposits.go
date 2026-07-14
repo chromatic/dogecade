@@ -52,7 +52,7 @@ func (svc *DepositsService) List(ctx context.Context, state string, limit int) (
 	if err != nil {
 		return nil, fmt.Errorf("failed to list deposits: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var deposits []Deposit
 	for rows.Next() {

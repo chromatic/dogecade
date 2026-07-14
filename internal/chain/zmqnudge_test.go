@@ -67,7 +67,7 @@ func TestZMQNudger_LocalPubSubIntegration(t *testing.T) {
 	// Try to create a local publisher to test against.
 	// This may fail in sandboxes with restricted socket permissions.
 	pub := zmq4.NewPub(context.Background())
-	defer pub.Close()
+	defer func() { _ = pub.Close() }()
 
 	// Bind to a random port (127.0.0.1:0 lets the OS choose).
 	endpoint := "tcp://127.0.0.1:0"
@@ -171,7 +171,7 @@ func TestZMQNudger_ContextCancellation(t *testing.T) {
 func TestZMQNudger_MultipleMessages(t *testing.T) {
 	// Try to create a local publisher to test against.
 	pub := zmq4.NewPub(context.Background())
-	defer pub.Close()
+	defer func() { _ = pub.Close() }()
 
 	// Bind to a random port (127.0.0.1:0 lets the OS choose).
 	endpoint := "tcp://127.0.0.1:0"

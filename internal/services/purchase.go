@@ -35,7 +35,7 @@ func (svc *PurchaseService) StartPurchase(ctx context.Context, userID int64) (ad
 	if err != nil {
 		return "", fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Reuse an existing assigned-but-unpaid address for this user, if any.
 	err = tx.QueryRowContext(ctx,
@@ -136,7 +136,7 @@ func NewPurchaseCreditHook(s *store.Store, settings *SettingsService, ledger *Le
 		if err != nil {
 			return fmt.Errorf("failed to begin transaction: %w", err)
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		if _, err := tx.ExecContext(ctx,
 			"UPDATE deposits SET remainder_koinu = ? WHERE id = ?",

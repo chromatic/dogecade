@@ -53,7 +53,7 @@ func (svc *AdminAuditService) List(ctx context.Context, limit int) ([]AdminAudit
 	if err != nil {
 		return nil, fmt.Errorf("failed to list admin audit entries: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var entries []AdminAuditEntry
 	for rows.Next() {

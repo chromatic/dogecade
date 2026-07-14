@@ -122,7 +122,7 @@ func (p *DepositPipeline) upsertAndAdvance(ctx context.Context, addressID int64,
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	now := time.Now().UTC().Format(time.RFC3339)
 
@@ -182,13 +182,14 @@ func (p *DepositPipeline) upsertAndAdvance(ctx context.Context, addressID int64,
 	// Step 3: Advance state machine based on confirmation thresholds
 	// Check if we can advance from 'seen' to 'confirmed'
 	var newState string
-	if currentState == "seen" {
+	switch currentState {
+	case "seen":
 		if confirmations >= minConf || (zeroConfMax > 0 && amountKoinu <= zeroConfMax) {
 			newState = "confirmed"
 		}
-	} else if currentState == "confirmed" {
+	case "confirmed":
 		newState = "confirmed"
-	} else if currentState == "credited" || currentState == "orphaned" {
+	case "credited", "orphaned":
 		// Already terminal; don't modify
 		if err := tx.Commit(); err != nil {
 			return fmt.Errorf("failed to commit transaction: %w", err)

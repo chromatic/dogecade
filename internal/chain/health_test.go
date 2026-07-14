@@ -36,7 +36,7 @@ func TestNodeHealthChecker_NilClient_ReturnsUnconfigured(t *testing.T) {
 func TestNodeHealthChecker_RPCError_ReturnsUnreachable(t *testing.T) {
 	ctx := context.Background()
 	s := openTestStore(t, t.TempDir())
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	checker := newTestNodeHealthChecker(t, s, corerpc.BlockchainInfo{}, fmt.Errorf("connection refused"))
 
@@ -58,7 +58,7 @@ func TestNodeHealthChecker_RPCError_ReturnsUnreachable(t *testing.T) {
 func TestNodeHealthChecker_Syncing_ReturnsSyncing(t *testing.T) {
 	ctx := context.Background()
 	s := openTestStore(t, t.TempDir())
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	info := corerpc.BlockchainInfo{
 		Chain:                "testnet",
@@ -86,7 +86,7 @@ func TestNodeHealthChecker_Syncing_ReturnsSyncing(t *testing.T) {
 func TestNodeHealthChecker_Healthy_ReturnsOk(t *testing.T) {
 	ctx := context.Background()
 	s := openTestStore(t, t.TempDir())
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	info := corerpc.BlockchainInfo{
 		Chain:                "testnet",
@@ -116,7 +116,7 @@ func TestNodeHealthChecker_Healthy_ReturnsOk(t *testing.T) {
 func TestNodeHealthChecker_NoDoubleInsertAlert_OnRepeatUnhealthy(t *testing.T) {
 	ctx := context.Background()
 	s := openTestStore(t, t.TempDir())
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	checker := newTestNodeHealthChecker(t, s, corerpc.BlockchainInfo{}, fmt.Errorf("connection refused"))
 
@@ -189,7 +189,7 @@ func countUnackedAlerts(t *testing.T, s *store.Store, kind string) int {
 func TestNodeHealthChecker_StateTransition(t *testing.T) {
 	ctx := context.Background()
 	s := openTestStore(t, t.TempDir())
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	// Simulate state transitions: healthy -> syncing -> healthy
 	tests := []struct {

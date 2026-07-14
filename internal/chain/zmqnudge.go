@@ -45,7 +45,7 @@ func (z *ZMQNudger) Run(ctx context.Context) error {
 
 	// Create a SUB socket.
 	sub := zmq4.NewSub(ctx)
-	defer sub.Close()
+	defer func() { _ = sub.Close() }()
 
 	// Attempt to connect to the ZMQ publisher.
 	// If the endpoint is unreachable, this will fail; log the warning

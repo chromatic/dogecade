@@ -187,7 +187,9 @@ func TestCountsByStateReflectsAllStates(t *testing.T) {
 	// Assign and retire some
 	_, id1, _ := svc.Assign(ctx, "token_deposit")
 	_, _, _ = svc.Assign(ctx, "token_deposit")
-	svc.Retire(ctx, id1)
+	if err := svc.Retire(ctx, id1); err != nil {
+		t.Fatalf("Retire failed: %v", err)
+	}
 
 	// Now we have: 2 pool, 1 assigned, 1 retired
 	counts, err := svc.CountsByState(ctx)

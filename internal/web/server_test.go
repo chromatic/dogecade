@@ -34,7 +34,7 @@ func doHealthzRequest(t *testing.T, server *Server) *httptest.ResponseRecorder {
 
 func TestHealthzHealthy(t *testing.T) {
 	s := openTestStore(t)
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	server := NewServer(s, nil, nil)
 
@@ -62,7 +62,7 @@ func TestHealthzHealthy(t *testing.T) {
 
 func TestHealthzUnhealthy(t *testing.T) {
 	s := openTestStore(t)
-	s.Close()
+	_ = s.Close()
 
 	// Create server with closed store
 	server := NewServer(s, nil, nil)
@@ -94,7 +94,7 @@ func TestHealthzUnhealthy(t *testing.T) {
 
 func TestHealthzWithCancelledContext(t *testing.T) {
 	s := openTestStore(t)
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	server := NewServer(s, nil, nil)
 
@@ -129,7 +129,7 @@ func TestHealthzNodeHealthDoesNotAffectHTTPStatus(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := openTestStore(t)
-			defer s.Close()
+			defer func() { _ = s.Close() }()
 
 			checker := &fakeNodeHealthChecker{state: tt.nodeState}
 			server := NewServer(s, nil, checker)
@@ -151,7 +151,7 @@ func TestHealthzNodeHealthDoesNotAffectHTTPStatus(t *testing.T) {
 func TestHealthzWithNodeHealthChecker_DBDownNodeUp(t *testing.T) {
 	// Verify that DB down returns 503 even if node is healthy
 	s := openTestStore(t)
-	s.Close()
+	_ = s.Close()
 
 	checker := &fakeNodeHealthChecker{state: "ok"}
 	server := NewServer(s, nil, checker)
@@ -167,7 +167,7 @@ func TestHealthzWithNodeHealthChecker_DBDownNodeUp(t *testing.T) {
 func TestHealthzWithNodeHealthChecker_Nil(t *testing.T) {
 	// Test that nil checker works and response doesn't include node field
 	s := openTestStore(t)
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	server := NewServer(s, nil, nil)
 

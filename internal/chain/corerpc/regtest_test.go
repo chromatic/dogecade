@@ -11,8 +11,8 @@ import (
 func withTempPATH(t *testing.T, tempDir string, fn func()) {
 	t.Helper()
 	originalPath := os.Getenv("PATH")
-	defer os.Setenv("PATH", originalPath)
-	os.Setenv("PATH", tempDir)
+	defer func() { _ = os.Setenv("PATH", originalPath) }()
+	_ = os.Setenv("PATH", tempDir)
 	fn()
 }
 

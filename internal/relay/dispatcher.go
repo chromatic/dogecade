@@ -154,7 +154,7 @@ func (d *Dispatcher) fetchPendingPulses(ctx context.Context) ([]pendingPulse, er
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var pulses []pendingPulse
 	for rows.Next() {

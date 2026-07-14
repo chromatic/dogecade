@@ -43,7 +43,7 @@ func TestOpenCreatesDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open() failed: %v", err)
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	// Verify the file exists.
 	if _, err := os.Stat(dbPath); err != nil {
@@ -53,7 +53,7 @@ func TestOpenCreatesDB(t *testing.T) {
 
 func TestOpenCreatesSettingsTable(t *testing.T) {
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	if !tableExists(t, store, "settings") {
 		t.Error("settings table not created")
@@ -62,7 +62,7 @@ func TestOpenCreatesSettingsTable(t *testing.T) {
 
 func TestOpenRecordsMigrationInSchemaMigrations(t *testing.T) {
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	if !tableExists(t, store, "schema_migrations") {
 		t.Fatal("schema_migrations table not created")
@@ -90,14 +90,16 @@ func TestReopenDoesNotReapplyMigrations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("First Open() failed: %v", err)
 	}
-	store1.Close()
+	if err := store1.Close(); err != nil {
+		t.Fatalf("store1.Close() failed: %v", err)
+	}
 
 	// Second open should not fail or re-apply migrations
 	store2, err := Open(dbPath)
 	if err != nil {
 		t.Fatalf("Second Open() failed: %v", err)
 	}
-	defer store2.Close()
+	defer func() { _ = store2.Close() }()
 
 	// Verify migration is still recorded exactly once (idempotency check)
 	var count int
@@ -114,7 +116,7 @@ func TestReopenDoesNotReapplyMigrations(t *testing.T) {
 
 func TestForeignKeysAreEnabled(t *testing.T) {
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	// Query foreign_keys pragma
 	var value int
@@ -129,7 +131,7 @@ func TestForeignKeysAreEnabled(t *testing.T) {
 
 func TestWALModeIsSet(t *testing.T) {
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	// Query journal_mode pragma
 	var journalMode string
@@ -169,7 +171,7 @@ func TestClose(t *testing.T) {
 
 func TestPing(t *testing.T) {
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	// Ping with context should succeed
 	ctx, cancel := context.WithCancel(context.Background())
@@ -183,7 +185,7 @@ func TestPing(t *testing.T) {
 
 func TestPingClosedDatabase(t *testing.T) {
 	store := openTestStore(t)
-	store.Close()
+	_ = store.Close()
 
 	// Ping on closed database should fail
 	ctx, cancel := context.WithCancel(context.Background())
@@ -197,14 +199,14 @@ func TestPingClosedDatabase(t *testing.T) {
 
 func TestSettingsTableSchema(t *testing.T) {
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	// Query the schema of settings table
 	rows, err := store.db.Query("PRAGMA table_info(settings)")
 	if err != nil {
 		t.Fatalf("Failed to query table_info: %v", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	columns := make(map[string]bool)
 	for rows.Next() {
@@ -233,7 +235,7 @@ func TestMigrationsAppliedInTransaction(t *testing.T) {
 	// checking that both schema_migrations and settings table exist together,
 	// or neither exists (no partial state).
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	// Both tables should exist
 	var settingsTable, migrationsTable string
@@ -263,7 +265,7 @@ func TestBusyTimeout(t *testing.T) {
 	// This is a basic smoke test to ensure the connection string includes
 	// the timeout pragma.
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	// Query busy_timeout pragma - if not set or invalid, this may fail
 	var timeout int
@@ -279,7 +281,7 @@ func TestBusyTimeout(t *testing.T) {
 // Test that specific migrations are recorded
 func TestMigrationsRecorded(t *testing.T) {
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	tests := []string{
 		"0001_settings",
@@ -301,7 +303,7 @@ func TestMigrationsRecorded(t *testing.T) {
 // Test that all required tables exist
 func TestRequiredTablesExist(t *testing.T) {
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	requiredTables := []string{
 		"settings",
@@ -320,7 +322,7 @@ func TestRequiredTablesExist(t *testing.T) {
 
 func TestHdCursorTableIsEmpty(t *testing.T) {
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	// Verify hd_cursor table starts empty (reserved for future use).
 	var count int
@@ -335,7 +337,7 @@ func TestHdCursorTableIsEmpty(t *testing.T) {
 
 func TestAddressesInsertAndRead(t *testing.T) {
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	// Insert a minimal valid addresses row.
 	testAddr := "DKB3rR1kH3GK5bQEYvb9GxkNnbU3WsAUHf"
@@ -369,7 +371,7 @@ func TestAddressesInsertAndRead(t *testing.T) {
 
 func TestAddressesUniqueConstraint(t *testing.T) {
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 	// Insert first address.
 	testAddr := "DKB3rR1kH3GK5bQEYvb9GxkNnbU3WsAUHf"
 	_, err := store.db.Exec(`
@@ -392,7 +394,7 @@ func TestAddressesUniqueConstraint(t *testing.T) {
 
 func TestAddressesStateCheckConstraint(t *testing.T) {
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 	// Try to insert an address with invalid state value.
 	_, err := store.db.Exec(`
 		INSERT INTO addresses (address, state, purpose)
@@ -405,7 +407,7 @@ func TestAddressesStateCheckConstraint(t *testing.T) {
 
 func TestAddressesPurposeCheckConstraint(t *testing.T) {
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 	// Try to insert an address with invalid purpose value.
 	_, err := store.db.Exec(`
 		INSERT INTO addresses (address, state, purpose)
@@ -418,7 +420,7 @@ func TestAddressesPurposeCheckConstraint(t *testing.T) {
 
 func TestDepositsTableExists(t *testing.T) {
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	if !tableExists(t, store, "deposits") {
 		t.Error("deposits table not created")
@@ -447,7 +449,7 @@ func insertTestAddress(t *testing.T, store *Store, addr, state, purpose string) 
 
 func TestDepositsInsertMinimalValidRow(t *testing.T) {
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	// Create a local address row to satisfy the FK constraint.
 	testAddr := "DKB3rR1kH3GK5bQEYvb9GxkNnbU3WsAUHf"
@@ -467,7 +469,7 @@ func TestDepositsInsertMinimalValidRow(t *testing.T) {
 
 func TestDepositsInsertAndRead(t *testing.T) {
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	// Create a local address row to satisfy the FK constraint.
 	testAddr := "DKB3rR1kH3GK5bQEYvb9GxkNnbU3WsAUHf"
@@ -519,7 +521,7 @@ func TestDepositsInsertAndRead(t *testing.T) {
 
 func TestDepositsUniqueTxidVoutConstraint(t *testing.T) {
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	// Create a local address row.
 	testAddr := "DKB3rR1kH3GK5bQEYvb9GxkNnbU3WsAUHf"
@@ -548,7 +550,7 @@ func TestDepositsUniqueTxidVoutConstraint(t *testing.T) {
 
 func TestDepositsSameTxidDifferentVoutAllowed(t *testing.T) {
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	// Create a local address row.
 	testAddr := "DKB3rR1kH3GK5bQEYvb9GxkNnbU3WsAUHf"
@@ -586,7 +588,7 @@ func TestDepositsSameTxidDifferentVoutAllowed(t *testing.T) {
 
 func TestDepositsStateCheckConstraint(t *testing.T) {
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	// Create a local address row.
 	testAddr := "DKB3rR1kH3GK5bQEYvb9GxkNnbU3WsAUHf"
@@ -604,7 +606,7 @@ func TestDepositsStateCheckConstraint(t *testing.T) {
 
 func TestDepositsForeignKeyConstraint(t *testing.T) {
 	store := openTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	// Try to insert a deposit with a non-existent address_id.
 	// This should fail due to the FK constraint (foreign_keys=ON is set by store.Open).
