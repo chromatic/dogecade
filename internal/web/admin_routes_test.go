@@ -110,7 +110,7 @@ func adminSessionCookie(t *testing.T, sessions *auth.SessionManager, userID int6
 func TestAdminDashboardRequiresAdmin(t *testing.T) {
 	s, bundle := newAdminTestBundle(t)
 	ctx := context.Background()
-	userID := seedUser(t, ctx, s, "not-an-admin")
+	userID := seedNonAdminUser(t, ctx, s, "not-an-admin")
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
@@ -132,6 +132,19 @@ func sessionCookieAsNonAdmin(t *testing.T, sessions *auth.SessionManager, userID
 }
 
 func seedUser(t *testing.T, ctx context.Context, s *store.Store, subjectHash string) int64 {
+	t.Helper()
+	users := services.NewUsersService(s)
+	// isAdmin=true: seedUser backs adminSessionCookie in these tests, and
+	// RequireAdmin now re-checks is_admin against the DB record (not just
+	// the session cookie), so the seeded user must actually be an admin.
+	u, err := users.GetOrCreateBySubjectHash(ctx, subjectHash, "Test User", true)
+	if err != nil {
+		t.Fatalf("failed to seed user: %v", err)
+	}
+	return u.ID
+}
+
+func seedNonAdminUser(t *testing.T, ctx context.Context, s *store.Store, subjectHash string) int64 {
 	t.Helper()
 	users := services.NewUsersService(s)
 	u, err := users.GetOrCreateBySubjectHash(ctx, subjectHash, "Test User", false)

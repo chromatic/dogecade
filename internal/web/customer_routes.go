@@ -49,8 +49,8 @@ func (s *Server) RegisterCustomerRoutes(deps CustomerDeps) error {
 	s.mux.Handle("GET /m/{slug}", deps.Auth.OptionalAuth(http.HandlerFunc(s.handleMachineShow)))
 	s.mux.Handle("POST /m/{slug}", deps.Auth.RequireAuth(http.HandlerFunc(s.handleMachineRedeem)))
 	s.mux.Handle("GET /buy", deps.Auth.RequireAuth(http.HandlerFunc(s.handleBuy)))
-	s.mux.HandleFunc("GET /buy/status", s.handleBuyStatus)
-	s.mux.HandleFunc("GET /buy/events", s.handleBuyEvents)
+	s.mux.Handle("GET /buy/status", deps.Auth.RequireAuth(http.HandlerFunc(s.handleBuyStatus)))
+	s.mux.Handle("GET /buy/events", deps.Auth.RequireAuth(http.HandlerFunc(s.handleBuyEvents)))
 	s.mux.Handle("GET /history", deps.Auth.RequireAuth(http.HandlerFunc(s.handleHistory)))
 
 	return nil
@@ -309,9 +309,24 @@ func (s *Server) handleBuy(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleBuyStatus(w http.ResponseWriter, r *http.Request) {
+	sess, err := auth.CurrentSession(r)
+	if err != nil {
+		http.Error(w, "not signed in", http.StatusUnauthorized)
+		return
+	}
 	address := r.URL.Query().Get("address")
 	if address == "" {
 		http.Error(w, "missing address", http.StatusBadRequest)
+		return
+	}
+	owned, err := addressBelongsToUser(r.Context(), s.store.DB(), address, sess.UserID)
+	if err != nil {
+		s.logger.Error("failed to verify address ownership", "err", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if !owned {
+		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
 	minConf, err := s.customerDeps.Settings.GetMinConfirmations(r.Context())
@@ -336,9 +351,24 @@ func (s *Server) handleBuyStatus(w http.ResponseWriter, r *http.Request) {
 const buyEventsMaxDuration = 15 * time.Minute
 
 func (s *Server) handleBuyEvents(w http.ResponseWriter, r *http.Request) {
+	sess, err := auth.CurrentSession(r)
+	if err != nil {
+		http.Error(w, "not signed in", http.StatusUnauthorized)
+		return
+	}
 	address := r.URL.Query().Get("address")
 	if address == "" {
 		http.Error(w, "missing address", http.StatusBadRequest)
+		return
+	}
+	owned, err := addressBelongsToUser(r.Context(), s.store.DB(), address, sess.UserID)
+	if err != nil {
+		s.logger.Error("failed to verify address ownership", "err", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if !owned {
+		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
 	flusher, ok := w.(http.Flusher)

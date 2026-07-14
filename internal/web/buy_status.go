@@ -40,3 +40,19 @@ func latestDepositStatus(ctx context.Context, db *sql.DB, address string, minCon
 	}
 	return status, nil
 }
+
+// addressBelongsToUser reports whether address is a token_deposit address
+// currently assigned to userID, so /buy/status and /buy/events can refuse to
+// leak another customer's deposit progress to a caller who merely guesses or
+// reuses an address string.
+func addressBelongsToUser(ctx context.Context, db *sql.DB, address string, userID int64) (bool, error) {
+	var n int
+	err := db.QueryRowContext(ctx,
+		"SELECT COUNT(*) FROM addresses WHERE address = ? AND user_id = ? AND purpose = 'token_deposit'",
+		address, userID,
+	).Scan(&n)
+	if err != nil {
+		return false, fmt.Errorf("failed to verify address ownership for %q: %w", address, err)
+	}
+	return n > 0, nil
+}

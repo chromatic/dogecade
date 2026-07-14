@@ -40,6 +40,7 @@ type Handlers struct {
 // to fake in tests.
 type UsersLookup interface {
 	GetOrCreateBySubjectHash(ctx context.Context, subjectHash, displayName string, isAdmin bool) (services.User, error)
+	GetByID(ctx context.Context, id int64) (services.User, error)
 }
 
 // NewHandlers creates a Handlers. provider may be nil if OIDC isn't
@@ -239,13 +240,20 @@ func (h *Handlers) RequireAuth(next http.Handler) http.Handler {
 	})
 }
 
-// RequireAdmin is like RequireAuth but also requires the session's admin
-// flag; non-admins get a 403 rather than being redirected to login (they
-// are logged in, just not authorized).
+// RequireAdmin is like RequireAuth but also requires admin access;
+// non-admins get a 403 rather than being redirected to login (they are
+// logged in, just not authorized).
+//
+// It deliberately re-checks the user's is_admin flag in the database rather
+// than trusting sess.IsAdmin: the session cookie is valid for up to
+// SessionTTL (30 days) after issuance, so a cookie minted while the caller
+// was an admin would otherwise keep granting admin access for a month after
+// they were demoted or removed from DOGECADE_ADMIN_SUBJECTS.
 func (h *Handlers) RequireAdmin(next http.Handler) http.Handler {
 	return h.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sess, _ := CurrentSession(r)
-		if !sess.IsAdmin {
+		user, err := h.users.GetByID(r.Context(), sess.UserID)
+		if err != nil || !user.IsAdmin {
 			http.Error(w, "admin access required", http.StatusForbidden)
 			return
 		}

@@ -55,6 +55,7 @@ type testServerBundle struct {
 	sessions *auth.SessionManager
 	users    *services.UsersService
 	ledger   *services.LedgerService
+	purchase *services.PurchaseService
 }
 
 func newTestServerBundle(t *testing.T, checker nodeHealthChecker) (*store.Store, testServerBundle) {
@@ -85,7 +86,7 @@ func newTestServerBundle(t *testing.T, checker nodeHealthChecker) (*store.Store,
 		t.Fatalf("RegisterCustomerRoutes failed: %v", err)
 	}
 
-	return s, testServerBundle{server: server, sessions: sessions, users: users, ledger: ledger}
+	return s, testServerBundle{server: server, sessions: sessions, users: users, ledger: ledger, purchase: purchase}
 }
 
 func sessionCookie(t *testing.T, sessions *auth.SessionManager, userID int64, isAdmin bool) *http.Cookie {
@@ -339,9 +340,19 @@ func TestBuyAssignsAddressAndRendersQR(t *testing.T) {
 
 func TestBuyStatusReportsWaitingWithoutDeposit(t *testing.T) {
 	s, bundle := newTestServerBundle(t, &fakeNodeHealthChecker{state: "ok"})
-	_ = s
+	ctx := context.Background()
+	seedPoolAddress(t, ctx, s, "DTestPoolAddr2", "token_deposit")
+	u, err := bundle.users.GetOrCreateBySubjectHash(ctx, "hash-status", "Grant", false)
+	if err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+	address, err := bundle.purchase.StartPurchase(ctx, u.ID)
+	if err != nil {
+		t.Fatalf("failed to start purchase: %v", err)
+	}
 
-	req := httptest.NewRequest(http.MethodGet, "/buy/status?address=Dnonexistent", nil)
+	req := httptest.NewRequest(http.MethodGet, "/buy/status?address="+address, nil)
+	req.AddCookie(sessionCookie(t, bundle.sessions, u.ID, false))
 	rec := httptest.NewRecorder()
 	bundle.server.Handler().ServeHTTP(rec, req)
 
@@ -350,6 +361,33 @@ func TestBuyStatusReportsWaitingWithoutDeposit(t *testing.T) {
 	}
 	if !strings.Contains(rec.Body.String(), `"state":"waiting"`) {
 		t.Errorf("expected waiting state, got: %s", rec.Body.String())
+	}
+}
+
+func TestBuyStatusRejectsAddressNotOwnedByCaller(t *testing.T) {
+	s, bundle := newTestServerBundle(t, &fakeNodeHealthChecker{state: "ok"})
+	ctx := context.Background()
+	seedPoolAddress(t, ctx, s, "DTestPoolAddr3", "token_deposit")
+	owner, err := bundle.users.GetOrCreateBySubjectHash(ctx, "hash-owner", "Owner", false)
+	if err != nil {
+		t.Fatalf("failed to create owner: %v", err)
+	}
+	address, err := bundle.purchase.StartPurchase(ctx, owner.ID)
+	if err != nil {
+		t.Fatalf("failed to start purchase: %v", err)
+	}
+	other, err := bundle.users.GetOrCreateBySubjectHash(ctx, "hash-other", "Other", false)
+	if err != nil {
+		t.Fatalf("failed to create other user: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/buy/status?address="+address, nil)
+	req.AddCookie(sessionCookie(t, bundle.sessions, other.ID, false))
+	rec := httptest.NewRecorder()
+	bundle.server.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for address owned by another user, got %d", rec.Code)
 	}
 }
 

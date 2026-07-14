@@ -220,10 +220,31 @@ func (p *DepositPipeline) upsertAndAdvance(ctx context.Context, addressID int64,
 	// wouldn't commit until credit() returned). So: commit the
 	// seen->confirmed transition first, then run credit() unlocked, then a
 	// second short transaction marks 'credited'.
+	//
+	// currentState == "confirmed" here on every event for a deposit that's
+	// already confirmed (not just the seen->confirmed transition), since a
+	// deposit can receive further confirmation events while still awaiting
+	// crediting. Without a claim, each of those would re-run the credit
+	// hook. claimForCrediting atomically claims the deposit first, so only
+	// one caller ever gets to run the hook for it.
 	if currentState == "confirmed" {
+		claimed, err := p.claimForCrediting(ctx, depositID, now)
+		if err != nil {
+			return fmt.Errorf("failed to claim deposit for crediting: %w", err)
+		}
+		if !claimed {
+			// Another in-flight call already owns crediting this deposit.
+			return nil
+		}
+
 		if err := p.credit(ctx, depositID); err != nil {
-			// Credit hook failed; deposit is already committed at
-			// 'confirmed' above, so it's retryable on the next event.
+			// Release the claim so a later event can retry crediting.
+			if _, relErr := p.store.DB().ExecContext(ctx,
+				"UPDATE deposits SET crediting_claimed_at = NULL WHERE id = ?",
+				depositID,
+			); relErr != nil {
+				return fmt.Errorf("credit hook failed: %w (also failed to release claim: %v)", err, relErr)
+			}
 			return fmt.Errorf("credit hook failed: %w", err)
 		}
 
@@ -236,6 +257,36 @@ func (p *DepositPipeline) upsertAndAdvance(ctx context.Context, addressID int64,
 	}
 
 	return nil
+}
+
+// creditClaimStaleAfter bounds how long a crediting claim is honored before
+// it's considered abandoned (the process that took it crashed mid-credit)
+// and can be reclaimed by a later event, so a crash doesn't permanently
+// strand a deposit at 'confirmed'.
+const creditClaimStaleAfter = 2 * time.Minute
+
+// claimForCrediting atomically claims depositID for crediting, so only one
+// caller ever runs the credit hook for a given deposit even if multiple
+// confirmation events arrive concurrently or are redelivered. Returns
+// (true, nil) if the claim was acquired, (false, nil) if another live claim
+// already owns it.
+func (p *DepositPipeline) claimForCrediting(ctx context.Context, depositID int64, now string) (bool, error) {
+	staleBefore := time.Now().UTC().Add(-creditClaimStaleAfter).Format(time.RFC3339)
+	result, err := p.store.DB().ExecContext(ctx, `
+		UPDATE deposits SET crediting_claimed_at = ?
+		WHERE id = ? AND state = 'confirmed'
+		AND (crediting_claimed_at IS NULL OR crediting_claimed_at < ?)
+	`,
+		now, depositID, staleBefore,
+	)
+	if err != nil {
+		return false, err
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return n == 1, nil
 }
 
 // insertReorgAlert inserts a deposit_reorged_after_credit alert with dedup.

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -49,6 +50,15 @@ func (f *fakeUsersLookup) GetOrCreateBySubjectHash(ctx context.Context, subjectH
 	f.nextID++
 	f.users[subjectHash] = u
 	return u, nil
+}
+
+func (f *fakeUsersLookup) GetByID(ctx context.Context, id int64) (services.User, error) {
+	for _, u := range f.users {
+		if u.ID == id {
+			return u, nil
+		}
+	}
+	return services.User{}, errors.New("user not found")
 }
 
 func newTestHandlers(ex exchanger, users UsersLookup, adminSubjects []AdminSubject) *Handlers {
@@ -295,9 +305,14 @@ func TestRequireAdminRejectsNonAdmin(t *testing.T) {
 }
 
 func TestRequireAdminAllowsAdmin(t *testing.T) {
-	h := newTestHandlers(nil, newFakeUsersLookup(), nil)
+	users := newFakeUsersLookup()
+	u, err := users.GetOrCreateBySubjectHash(context.Background(), "admin-subject", "Admin", true)
+	if err != nil {
+		t.Fatalf("failed to seed admin user: %v", err)
+	}
+	h := newTestHandlers(nil, users, nil)
 	rec := httptest.NewRecorder()
-	if err := h.sessions.Issue(rec, 1, true); err != nil {
+	if err := h.sessions.Issue(rec, u.ID, true); err != nil {
 		t.Fatalf("Issue failed: %v", err)
 	}
 
